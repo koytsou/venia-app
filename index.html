@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="el">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Για Εσένα 💘</title>
+
+  <meta name="theme-color" content="#ff3b6b" />
+  <meta name="description" content="Ένα μικρό δώρο για σένα 💘" />
+
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+</head>
+
+<body>
+  <!-- INTRO OVERLAY -->
+  <div class="intro" id="intro">
+    <div class="introCard">
+      <div class="introGift" aria-hidden="true">
+        <div class="introGlow"></div>
+        <div class="introEmoji">🎁</div>
+      </div>
+
+      <div class="introTitle">Αυτό είναι κάτι δικό μας</div>
+      <div class="introText">Μια μικρή σειρά από εκπλήξεις… για εσένα. 💘</div>
+
+      <button class="btn primary introBtn" id="btnUs" type="button">Εμείς</button>
+      <div class="introHint">πάτα για να ξεκινήσει</div>
+    </div>
+  </div>
+
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">💘</div>
+        <div class="brandText">
+          <div class="brandTitle">Το δώρο μου</div>
+          <div class="brandSub" id="brandSub">για εσένα</div>
+        </div>
+      </div>
+
+      <div class="miniProgress">
+        <div class="progressBar" aria-hidden="true">
+          <div class="progressFill" id="progressFill"></div>
+        </div>
+        <div class="progressText" id="progressText">1 / 7</div>
+      </div>
+    </header>
+
+    <main class="main">
+      <!-- STEP 0: HEART (hold -> reveal, tap when full -> next) -->
+      <section class="step active" id="stepHeart">
+        <div class="card hero oneCol heartStep">
+          <div class="heartWrap" id="heartWrap" aria-label="Κράτα πατημένη την καρδιά">
+            <div class="heartGlow"></div>
+
+            <!-- Progress ring -->
+            <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
+              <circle class="ringTrack" cx="60" cy="60" r="46"></circle>
+              <circle class="ringFill" id="ringFill" cx="60" cy="60" r="46"></circle>
+            </svg>
+
+            <div class="heartIcon" id="heartIcon">❤️</div>
+
+            <!-- Sparks -->
+            <div class="sparks" id="sparks" aria-hidden="true"></div>
+          </div>
+
+          <div class="heartText" id="heartText">
+            Υπάρχουν στιγμές που αξίζει<br>να τις νιώσεις πρώτα.
+          </div>
+
+          <div class="photoReveal" id="photoReveal">
+            <img id="revealImg" src="assets/slide1.jpg" alt="Η στιγμή μας" />
+            <div class="holdHint" id="holdHint"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 1: PUZZLE -->
+      <section class="step" id="step2">
+        <div class="card reveal">
+          <div class="revealTitle">🧩 Μπεμπικινάκι μου</div>
+
+          <div class="puzzleWrap">
+            <div class="puzzleTop">
+              <div class="puzzleText" id="puzzleText">Φτιάξε την φωτογραφία για να συνεχίσουμε… 💘</div>
+              <div class="puzzleBadge" id="puzzleBadge">0/6</div>
+            </div>
+
+            <div class="puzzleBoard" id="puzzleBoard" aria-label="Puzzle φωτογραφίας"></div>
+          </div>
+
+          <div class="puzzleActions">
+            <button class="btn ghost" id="btnPuzzleReset" type="button">Ξανά 🔄</button>
+            <button class="btn primary" id="btnNext2" type="button">Συνέχεια</button>
+          </div>
+
+          <div class="puzzleMini hidden" id="puzzleMini">
+            Συγνώμηηη δεν άντεξα...
+          </div>
+
+        </div>
+      </section>
+
+      <!-- STEP 2: Message -->
+      <section class="step" id="step3">
+        <div class="card hero oneCol heartStep">
+          <div class="holdWordsWrap" id="holdWordsWrap" aria-label="Κράτα πατημένο">
+            <div class="holdWordsGlow"></div>
+
+            <div class="holdWordsBig" id="holdWordsBig">Κράτα…</div>
+
+            <div class="holdWordsBar" aria-hidden="true">
+              <div class="holdWordsBarFill" id="holdWordsBarFill"></div>
+            </div>
+
+            <div class="holdWordsHint" id="holdWordsHint">
+              Κράτα για 3 δευτερόλεπτα 💘
+            </div>
+          </div>
+
+          <button class="btn primary hidden" id="btnNextHoldWords" type="button">
+            Συνέχεια ✨
+          </button>
+        </div>
+      </section>
+
+      <!-- STEP 3: Song -->
+      <section class="step" id="step4">
+        <div class="card reveal">
+          <div class="revealTitle">🎵 Το τραγούδι μας</div>
+
+          <div class="revealBody">
+            <div style="opacity:.9; margin-bottom:10px;">
+              Αυτό το τραγούδι μου θυμίζει εμάς.
+            </div>
+
+            <iframe data-testid="embed-iframe" style="border-radius:12px"
+              src="https://open.spotify.com/embed/track/0OwbEVwC2w9CgtS3RYcQlv?utm_source=generator"
+              width="100%" height="352" frameBorder="0" allowfullscreen=""
+              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+              loading="lazy"></iframe>
+          </div>
+
+          <div class="actionCenter">
+            <button class="btn primary" id="btnNext4">Συνέχεια</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 4: Voice -->
+      <section class="step" id="step5">
+        <div class="card reveal">
+          <div class="revealTitle">💌 Η φωνή μου</div>
+          <div class="revealBody" id="audioBox"></div>
+          <div class="actionCenter">
+            <button class="btn primary" id="btnNext5">Συνέχεια</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 5: QUIZ -->
+      <section class="step" id="stepQuiz">
+        <div class="card reveal">
+          <div class="revealTitle">🧠 Quiz για εμάς</div>
+          <p class="p" style="opacity:.9">3 μικρές ερωτήσεις… αν σε ξέρω καλά 💘</p>
+
+          <div class="quizBox" id="quizBox"></div>
+
+          <div class="quizActions">
+            <button class="btn ghost" id="btnQuizPrev" type="button">Πίσω</button>
+            <button class="btn primary" id="btnQuizNext" type="button">Επόμενο</button>
+          </div>
+
+          
+
+          <!-- ΝΕΟ mini μήνυμα στο τέλος του quiz -->
+          <div class="quizMini hidden" id="quizMiniEnd">
+            Ελπίζω να τα βρήκες όλα 💘
+          </div>
+
+          <div class="actionCenter hidden" id="quizContinueWrap">
+            <button class="btn primary" id="btnQuizContinue" type="button">Συνέχεια ✨</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 6: Future -->
+      <section class="step" id="stepFuture">
+        <div class="card">
+          <h2 class="h2">💍 Το μέλλον μας</h2>
+          <p class="p">Μερικά πράγματα που θέλω να ζήσουμε μαζί…</p>
+
+          <div class="panel" id="futurePanel">Πάτα “Δείξε μου” για να τα δεις ένα-ένα.</div>
+          <button class="btn primary" id="btnFutureNext">Δείξε μου</button>
+        </div>
+      </section>
+
+      <!-- STEP 7: Final -->
+      <section class="step" id="step7">
+        <div class="card">
+          <h2 class="h2">❓ Μια υπόσχεση</h2>
+          <p class="p bigQ" id="finalQuestion">
+            Υπόσχεσαι να είσαι και του χρόνου ο Βαλεντίνος μου;
+          </p>
+
+          <button class="btn primary" id="btnYes">Ναι ❤️</button>
+
+          <div class="quote" style="margin-top:10px;">
+            «Ό,τι κι αν έρθει… θέλω να είσαι εσύ.»
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- MODAL -->
+    <div class="modal hidden" id="modal" role="dialog" aria-modal="true">
+      <div class="modalCard">
+        <div class="modalIcon">💘</div>
+        <div class="modalTitle" id="modalTitle">🥹</div>
+        <div class="modalText" id="modalText"></div>
+        <div class="modalButtons">
+          <button class="btn primary" id="modalClose" type="button">ΟΚ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    // Για development (VS Code Live Server) συχνά το SW κάνει caching μπερδέματα.
+    // Αν θες, άστο έτσι. Αν δεις περίεργα, σχολίασέ το προσωρινά.
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("sw.js");
+    }
+  </script>
+</body>
+</html>
