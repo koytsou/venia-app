@@ -1,3 +1,52 @@
+// ===== LOCK SCREEN =====
+const LOCK_CODE = "14/6/24";
+
+const lockScreen = document.getElementById("lockScreen");
+const lockInput  = document.getElementById("lockInput");
+const lockBtn    = document.getElementById("lockBtn");
+const lockError  = document.getElementById("lockError");
+
+function hideLock() {
+  if (!lockScreen) return;
+  lockScreen.classList.add("fadeOut");
+  setTimeout(() => {
+    lockScreen.style.display = "none";
+  }, 320);
+}
+
+function tryUnlock() {
+  if (!lockInput) return;
+
+  const val = lockInput.value.trim();
+  if (val === LOCK_CODE) {
+    // Αν θες να ζητάει κάθε φορά, σβήσε τις 2 επόμενες γραμμές:
+    localStorage.setItem("unlocked", "yes");
+
+    if (lockError) lockError.classList.add("hidden");
+    hideLock();
+  } else {
+    if (lockError) lockError.classList.remove("hidden");
+    lockInput.value = "";
+    try { if (navigator.vibrate) navigator.vibrate(18); } catch {}
+  }
+}
+
+// αν έχει ήδη ξεκλειδωθεί, μην το ξαναδείχνεις
+if (localStorage.getItem("unlocked") === "yes") {
+  if (lockScreen) lockScreen.style.display = "none";
+} else {
+  // focus στο input όταν ανοίγει
+  setTimeout(() => { try { lockInput && lockInput.focus(); } catch {} }, 150);
+}
+
+if (lockBtn) lockBtn.addEventListener("click", tryUnlock);
+if (lockInput) {
+  lockInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") tryUnlock();
+  });
+}
+
+
 // ===== ΡΥΘΜΙΣΕΙΣ =====
 const HER_NAME = "αγάπη μου";
 const PHOTO_PATH = "assets/slide1.jpg"; // ίδια φωτο για heart reveal
@@ -6,10 +55,25 @@ const VOICE_PATH = "assets/voice.mp3";
 const SPOTIFY_LINK = "https://open.spotify.com/track/XXXXXXXXXXXX";
 
 const FUTURE_CARDS = [
-  { title: "📍 Ταξίδι", text: "Θέλω ένα ταξίδι μόνο για εμάς… να χαθούμε και να γελάμε όλη μέρα." },
-  { title: "🏠 Σπίτι", text: "Ένα σπίτι με ζεστό φως, μουσική, και μια γωνιά που θα είναι “η γωνιά μας”." },
-  { title: "💕 5 χρόνια", text: "Να είμαστε ακόμα ‘εμείς’. Με περισσότερες αναμνήσεις και την ίδια αγάπη." }
+  {
+    title: "🎓 Το πτυχίο μας",
+    text: "Να το πάρουμε μαζί. Να λέμε «τα καταφέραμε» και να το γιορτάσουμε όπως μόνο εμείς ξέρουμε. 💘",
+    img: "assets/ptyxio.jpg"
+  },
+  {
+    title: "📍 Ταξίδι",
+    text: "Θέλω ένα ταξίδι μόνο για εμάς… να χαθούμε και να γελάμε όλη μέρα.",
+    img: "assets/taxidi.jpg"
+  },
+  {
+    title: "🏠 Σπίτι",
+    text: "Ένα σπίτι με ζεστό φως, μουσική, και μια γωνιά που θα είναι “η γωνιά μας”.",
+    img: "assets/spiti.jpg"
+  }
+
 ];
+
+
 
 // ===== DOM =====
 const intro = document.getElementById("intro");
@@ -65,7 +129,7 @@ const quizBox = document.getElementById("quizBox");
 const btnQuizPrev = document.getElementById("btnQuizPrev");
 const btnQuizNext = document.getElementById("btnQuizNext");
 const quizMini = document.getElementById("quizMini");
-const quizMiniEnd = document.getElementById("quizMiniEnd"); // νέο mini μήνυμα στο τέλος
+const quizMiniEnd = document.getElementById("quizMiniEnd");
 const quizContinueWrap = document.getElementById("quizContinueWrap");
 const btnQuizContinue = document.getElementById("btnQuizContinue");
 
@@ -145,20 +209,17 @@ function renderQuiz() {
     </div>
   `;
 
-  // click options
   [...quizBox.querySelectorAll(".quizOpt")].forEach((btn) => {
     btn.addEventListener("click", () => {
       const i = parseInt(btn.dataset.i, 10);
       quizAnswers[quizIndex] = i;
-      renderQuiz(); // re-render για selected + feedback
+      renderQuiz();
     });
   });
 
-  // prev enable state
   if (btnQuizPrev) btnQuizPrev.disabled = quizIndex === 0;
 }
 
-// ===== QUIZ BUTTONS =====
 if (btnQuizPrev) {
   btnQuizPrev.addEventListener("click", () => {
     if (quizIndex > 0) {
@@ -170,19 +231,16 @@ if (btnQuizPrev) {
 
 if (btnQuizNext) {
   btnQuizNext.addEventListener("click", () => {
-    // πρέπει να απαντήσει
     if (quizAnswers[quizIndex] == null) return;
 
-    // πάμε στην επόμενη
     if (quizIndex < QUIZ.length - 1) {
       quizIndex++;
       renderQuiz();
       return;
     }
 
-    // ===== finished quiz =====
     if (quizMini) quizMini.classList.remove("hidden");
-    if (quizMiniEnd) quizMiniEnd.classList.remove("hidden"); // ΝΕΟ mini μήνυμα
+    if (quizMiniEnd) quizMiniEnd.classList.remove("hidden");
     if (quizContinueWrap) quizContinueWrap.classList.remove("hidden");
 
     if (btnQuizNext) btnQuizNext.disabled = true;
@@ -192,7 +250,7 @@ if (btnQuizNext) {
 
 if (btnQuizContinue) {
   btnQuizContinue.addEventListener("click", () => {
-    goTo("stepFuture"); // πάμε στο μέλλον
+    goTo("stepFuture");
   });
 }
 
@@ -214,10 +272,7 @@ function closeModalFn() {
 }
 
 function setProgress() {
-  // Έχεις 7 screens: heart, puzzle, holdwords, song, voice, future, final
   const total = 7;
-
-  // current είναι 0..6 => value 1..7
   const value = Math.min(Math.max(current + 1, 1), total);
   const pct = (value / total) * 100;
 
@@ -242,14 +297,12 @@ function afterStepChange() {
   const active = steps[current];
   if (!active) return;
 
-  // init puzzle όταν μπαίνουμε στο step2
   if (active.id === "step2") {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => initPuzzle());
     });
   }
 
-  // init quiz όταν μπαίνουμε στο stepQuiz
   if (active.id === "stepQuiz") {
     quizIndex = 0;
     quizAnswers = Array(QUIZ.length).fill(null);
@@ -278,16 +331,6 @@ if (intro)
   });
 
 // ===== CONTENT SETUP =====
-if (songBox) {
-  songBox.innerHTML = `
-    <div style="opacity:.9;">Αυτό το τραγούδι μου θυμίζει εμάς.</div>
-    <a class="btn primary" style="margin-top:10px; text-align:center;"
-       href="${SPOTIFY_LINK}" target="_blank" rel="noopener">
-      Άνοιξε στο Spotify ▶
-    </a>
-  `;
-}
-
 if (audioBox) {
   audioBox.innerHTML = `
     <div style="opacity:.9;">Πάτα play…</div>
@@ -298,15 +341,11 @@ if (audioBox) {
   `;
 }
 
-// ===== NAV EVENTS (με ids, όχι indexes) =====
-if (btnNext2) btnNext2.addEventListener("click", () => goTo("step3")); // puzzle -> holdWords
-if (btnNextHoldWords) btnNextHoldWords.addEventListener("click", () => goTo("step4")); // holdWords -> song
-if (btnNext4) btnNext4.addEventListener("click", () => goTo("step5")); // song -> voice
-if (btnNext5) {
-  btnNext5.addEventListener("click", () => {
-    goTo("stepQuiz");
-  });
-}
+// ===== NAV EVENTS =====
+if (btnNext2) btnNext2.addEventListener("click", () => goTo("step3"));
+if (btnNextHoldWords) btnNextHoldWords.addEventListener("click", () => goTo("step4"));
+if (btnNext4) btnNext4.addEventListener("click", () => goTo("step5"));
+if (btnNext5) btnNext5.addEventListener("click", () => goTo("stepQuiz"));
 
 // ===== FUTURE =====
 if (btnFutureNext) {
@@ -314,15 +353,17 @@ if (btnFutureNext) {
     const card = FUTURE_CARDS[futureIndex % FUTURE_CARDS.length];
     if (futurePanel) {
       futurePanel.innerHTML = `
+        ${card.img ? `<img class="futureImg" src="${card.img}" alt="${card.title}">` : ""}
         <div style="font-weight:950; margin-bottom:6px;">${card.title}</div>
         <div style="opacity:.9; line-height:1.45;">${card.text}</div>
       `;
+
     }
     futureIndex++;
 
     if (futureIndex >= FUTURE_CARDS.length) {
       btnFutureNext.textContent = "Συνέχεια";
-      btnFutureNext.onclick = () => goTo("step7"); // final
+      btnFutureNext.onclick = () => goTo("step7");
     }
   });
 }
@@ -363,14 +404,13 @@ function spawnSpark(type = "mix") {
 // ===== HEART HOLD-TO-REVEAL + RING =====
 let holding = false;
 let raf = null;
-let progress = 0; // 0..1
+let progress = 0;
 let lastT = 0;
 const HOLD_DURATION = 1200;
 
 function applyReveal(p) {
   const x = Math.max(0, Math.min(1, p));
 
-  // photo reveal
   if (revealImg) {
     revealImg.style.opacity = String(x);
     const blur = 14 * (1 - x);
@@ -380,9 +420,8 @@ function applyReveal(p) {
     revealImg.style.transform = `scale(${scale.toFixed(3)})`;
   }
 
-  // ring progress
   if (ringFill) {
-    const CIRC = 289; // must match CSS ring
+    const CIRC = 289;
     ringFill.style.strokeDashoffset = String(CIRC * (1 - x));
   }
 }
@@ -448,7 +487,7 @@ function endHold() {
 }
 
 function tapAfterComplete() {
-  if (progress >= 1) goTo("step2"); // heart -> puzzle
+  if (progress >= 1) goTo("step2");
 }
 
 function bindHold(el) {
@@ -536,18 +575,14 @@ function initPuzzle() {
   const pileY = rect.height * 0.58;
 
   pieces.forEach((p, i) => {
-    const jitterX = (i % 3) * 10 + (Math.random() * 10);
-    const jitterY = Math.floor(i / 3) * 12 + (Math.random() * 10);
+    const jitterX = (i % 3) * 10 + Math.random() * 10;
+    const jitterY = Math.floor(i / 3) * 12 + Math.random() * 10;
     p.style.left = `${pileX + jitterX}px`;
     p.style.top = `${pileY + jitterY}px`;
   });
 
   pieces.forEach((piece) => {
-    let startX = 0,
-      startY = 0,
-      origX = 0,
-      origY = 0,
-      dragging = false;
+    let startX = 0, startY = 0, origX = 0, origY = 0, dragging = false;
 
     piece.addEventListener("pointerdown", (e) => {
       if (piece.classList.contains("locked")) return;
@@ -625,7 +660,7 @@ if (btnPuzzleReset) {
 // ===== HOLD WORDS (3s) =====
 let holdingWords = false;
 let wordsRaf = null;
-let wordsProgress = 0; // 0..1
+let wordsProgress = 0;
 let wordsLastT = 0;
 let wordsDone = false;
 

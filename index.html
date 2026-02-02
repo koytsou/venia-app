@@ -10,10 +10,34 @@
 
   <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="style.css" />
-  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-512.png">
 </head>
 
 <body>
+
+  <!-- LOCK SCREEN -->
+  <div class="lockScreen" id="lockScreen">
+    <div class="lockCard">
+      <div class="lockEmoji">🔐💘</div>
+      <div class="lockTitle">Μόνο για εμάς</div>
+      <div class="lockText">Βάλε την ημερομηνία που ξεκίνησαν όλα…</div>
+
+      <input
+        type="text"
+        id="lockInput"
+        placeholder="π.χ. **/*/**"
+        inputmode="numeric"
+        autocomplete="off"
+      />
+
+      <button class="btn primary" id="lockBtn" type="button">Ξεκλείδωσε 💕</button>
+
+      <div class="lockError hidden" id="lockError">
+        ❌ Όχι μωρό… δοκίμασε ξανά 💘
+      </div>
+    </div>
+  </div>
+
   <!-- INTRO OVERLAY -->
   <div class="intro" id="intro">
     <div class="introCard">
@@ -49,21 +73,18 @@
     </header>
 
     <main class="main">
-      <!-- STEP 0: HEART (hold -> reveal, tap when full -> next) -->
+      <!-- STEP 0: HEART -->
       <section class="step active" id="stepHeart">
         <div class="card hero oneCol heartStep">
           <div class="heartWrap" id="heartWrap" aria-label="Κράτα πατημένη την καρδιά">
             <div class="heartGlow"></div>
 
-            <!-- Progress ring -->
             <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
               <circle class="ringTrack" cx="60" cy="60" r="46"></circle>
               <circle class="ringFill" id="ringFill" cx="60" cy="60" r="46"></circle>
             </svg>
 
             <div class="heartIcon" id="heartIcon">❤️</div>
-
-            <!-- Sparks -->
             <div class="sparks" id="sparks" aria-hidden="true"></div>
           </div>
 
@@ -100,25 +121,21 @@
           <div class="puzzleMini hidden" id="puzzleMini">
             Συγνώμηηη δεν άντεξα...
           </div>
-
         </div>
       </section>
 
-      <!-- STEP 2: Message -->
+      <!-- STEP 2: HOLD WORDS -->
       <section class="step" id="step3">
         <div class="card hero oneCol heartStep">
           <div class="holdWordsWrap" id="holdWordsWrap" aria-label="Κράτα πατημένο">
             <div class="holdWordsGlow"></div>
-
             <div class="holdWordsBig" id="holdWordsBig">Κράτα…</div>
 
             <div class="holdWordsBar" aria-hidden="true">
               <div class="holdWordsBarFill" id="holdWordsBarFill"></div>
             </div>
 
-            <div class="holdWordsHint" id="holdWordsHint">
-              Κράτα για 3 δευτερόλεπτα 💘
-            </div>
+            <div class="holdWordsHint" id="holdWordsHint">Κράτα για 3 δευτερόλεπτα 💘</div>
           </div>
 
           <button class="btn primary hidden" id="btnNextHoldWords" type="button">
@@ -174,9 +191,10 @@
             <button class="btn primary" id="btnQuizNext" type="button">Επόμενο</button>
           </div>
 
-          
+          <div class="quizMini hidden" id="quizMini">
+            🥹 Τέλειο. Είσαι εσύ. Πάμε παρακάτω…
+          </div>
 
-          <!-- ΝΕΟ mini μήνυμα στο τέλος του quiz -->
           <div class="quizMini hidden" id="quizMiniEnd">
             Ελπίζω να τα βρήκες όλα 💘
           </div>
@@ -193,8 +211,10 @@
           <h2 class="h2">💍 Το μέλλον μας</h2>
           <p class="p">Μερικά πράγματα που θέλω να ζήσουμε μαζί…</p>
 
-          <div class="panel" id="futurePanel">Πάτα “Δείξε μου” για να τα δεις ένα-ένα.</div>
-          <button class="btn primary" id="btnFutureNext">Δείξε μου</button>
+          <div class="panel" id="futurePanel">Πάτα “Δείξε μου” — έχω κρύψει μικρά όνειρα για εμάς εδώ μέσα. 💘</div>
+          <div class="actionCenter">
+            <button class="btn primary" id="btnFutureNext">Δείξε μου</button>
+          </div>  
         </div>
       </section>
 
@@ -230,12 +250,9 @@
 
   <script src="app.js"></script>
   <script>
-    // Για development (VS Code Live Server) συχνά το SW κάνει caching μπερδέματα.
-    // Αν θες, άστο έτσι. Αν δεις περίεργα, σχολίασέ το προσωρινά.
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("sw.js");
     }
   </script>
 </body>
 </html>
-
