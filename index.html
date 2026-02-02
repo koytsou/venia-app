@@ -44,7 +44,8 @@
     </div>
   </div>
 
-  <!-- INTRO OVERLAY -->
+
+  <!-- INTRO / MODE SELECT OVERLAY -->
   <div class="intro" id="intro">
     <div class="introCard">
       <div class="introGift" aria-hidden="true">
@@ -52,13 +53,18 @@
         <div class="introEmoji">🎁</div>
       </div>
 
-      <div class="introTitle">Αυτό είναι κάτι δικό μας</div>
-      <div class="introText">Μια μικρή σειρά από εκπλήξεις… για εσένα. 💘</div>
+      <div class="introTitle">Πώς θέλεις να μπούμε σήμερα;</div>
+      <div class="introText">Διάλεξε ένα από τα δύο… 💘</div>
 
-      <button class="btn primary introBtn" id="btnUs" type="button">Εμείς</button>
-      <div class="introHint">πάτα για να ξεκινήσει</div>
+      <div class="modeBtns">
+        <button class="btn primary introBtn" id="btnValentine" type="button">🩷 Άγιος Βαλεντίνος</button>
+        <button class="btn ghost introBtn" id="btnUs" type="button">🤍 Εμείς</button>
+      </div>
+
+      <div class="introHint">διάλεξε για να συνεχίσεις</div>
     </div>
   </div>
+
 
   <div class="app">
     <header class="topbar">
@@ -218,6 +224,32 @@
           </div>  
         </div>
       </section>
+      
+      <!-- STEP US: ΕΜΕΙΣ -->
+      <section class="step" id="stepUs">
+        <div class="card">
+          <h2 class="h2">🤍 Εμείς</h2>
+          <p class="p">Ένα μικρό “σπίτι” για τη σχέση μας. Μένει εδώ… και μεγαλώνει μαζί μας.</p>
+
+          <div class="panel usPanel">
+            <div class="usGrid">
+              <button class="btn primary" id="btnUsCheckin" type="button">✅ Check-in</button>
+              <button class="btn ghost" id="btnUsMemories" type="button">📸 Στιγμές</button>
+              <button class="btn ghost" id="btnUsNotes" type="button">📝 Σημειώσεις</button>
+            </div>
+
+            <div class="usBox" id="usBox">
+              Πάτα ένα κουμπί… 💘
+            </div>
+          </div>
+
+          <div class="actionCenter" style="margin-top:12px;">
+            <button class="btn ghost" id="btnUsBack" type="button">⬅ Πίσω</button>
+            <button class="btn primary" id="btnUsGoVal" type="button">🩷 Πήγαινέ με στον Βαλεντίνο</button>
+          </div>
+        </div>
+      </section>
+
 
       <!-- STEP 7: Final -->
       <section class="step" id="step7">
@@ -257,5 +289,6 @@
   </script>
 </body>
 </html>
+
 
 
