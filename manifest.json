@@ -1,7 +1,7 @@
 {
   "name": "Το δώρο μου",
   "short_name": "My Gift",
-  "start_url": ".",
+  "start_url": "/venia-app/",
   "display": "standalone",
   "background_color": "#0b0b12",
   "theme_color": "#ff3b6b",
