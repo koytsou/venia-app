@@ -18,10 +18,8 @@ function tryUnlock() {
   if (!lockInput) return;
 
   const val = lockInput.value.trim();
-  if (val === LOCK_CODE) {
-    // Αν θες να ζητάει κάθε φορά, σβήσε τις 2 επόμενες γραμμές:
-    localStorage.setItem("unlocked", "yes");
 
+  if (val === LOCK_CODE) {
     if (lockError) lockError.classList.add("hidden");
     hideLock();
   } else {
@@ -30,6 +28,7 @@ function tryUnlock() {
     try { if (navigator.vibrate) navigator.vibrate(18); } catch {}
   }
 }
+
 
 // αν έχει ήδη ξεκλειδωθεί, μην το ξαναδείχνεις
 if (localStorage.getItem("unlocked") === "yes") {
@@ -751,3 +750,4 @@ if (holdWordsWrap) {
 applyReveal(0);
 showStep(0);
 setProgress();
+
