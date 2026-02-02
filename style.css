@@ -15,6 +15,27 @@
   --r16: 16px;
   --r22: 22px;
 }
+html, body{
+  height: 100%;
+  background: #0b0b12;   /* ίδιο σκούρο με το bg σου */
+}
+
+body{
+  min-height: 100vh;
+  min-height: -webkit-fill-available; /* iOS */
+   overscroll-behavior: none;
+}
+
+/* Γεμίζει σωστά τις “εγκοπές” (notch / home indicator) */
+@supports (padding: env(safe-area-inset-top)) {
+  body{
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
 
 *{box-sizing:border-box}
 html,body{height:100%}
