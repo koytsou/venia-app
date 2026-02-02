@@ -948,3 +948,25 @@ body{
   border: 1px solid rgba(255,255,255,.12);
   display: block;
 }
+.modeBtns{
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+.usGrid{
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.usBox{
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.18);
+  min-height: 90px;
+  line-height: 1.45;
+}
+@media (max-width: 420px){
+  .usGrid{ grid-template-columns: 1fr; }
+}
