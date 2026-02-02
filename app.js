@@ -17,7 +17,8 @@ function hideLock() {
 function tryUnlock() {
   if (!lockInput) return;
 
-  const val = lockInput.value.trim();
+  // δέχεται και με κενά / με / κλπ -> κρατάμε μόνο ψηφία
+  const val = lockInput.value.replace(/\D/g, "").trim();
 
   if (val === LOCK_CODE) {
     if (lockError) lockError.classList.add("hidden");
@@ -29,14 +30,8 @@ function tryUnlock() {
   }
 }
 
-
-// αν έχει ήδη ξεκλειδωθεί, μην το ξαναδείχνεις
-if (localStorage.getItem("unlocked") === "yes") {
-  if (lockScreen) lockScreen.style.display = "none";
-} else {
-  // focus στο input όταν ανοίγει
-  setTimeout(() => { try { lockInput && lockInput.focus(); } catch {} }, 150);
-}
+// focus στο input όταν ανοίγει
+setTimeout(() => { try { lockInput && lockInput.focus(); } catch {} }, 150);
 
 if (lockBtn) lockBtn.addEventListener("click", tryUnlock);
 if (lockInput) {
@@ -69,20 +64,18 @@ const FUTURE_CARDS = [
     text: "Ένα σπίτι με ζεστό φως, μουσική, και μια γωνιά που θα είναι “η γωνιά μας”.",
     img: "assets/spiti.jpg"
   }
-
 ];
-
 
 
 // ===== DOM =====
 const intro = document.getElementById("intro");
 const btnUs = document.getElementById("btnUs");
+const btnValentine = document.getElementById("btnValentine");
 
 const steps = [...document.querySelectorAll(".step")];
 const progressFill = document.getElementById("progressFill");
 const progressText = document.getElementById("progressText");
 
-const songBox = document.getElementById("songBox");
 const audioBox = document.getElementById("audioBox");
 
 const btnNext2 = document.getElementById("btnNext2"); // από puzzle
@@ -132,6 +125,15 @@ const quizMiniEnd = document.getElementById("quizMiniEnd");
 const quizContinueWrap = document.getElementById("quizContinueWrap");
 const btnQuizContinue = document.getElementById("btnQuizContinue");
 
+// US mode DOM
+const btnUsCheckin = document.getElementById("btnUsCheckin");
+const btnUsMemories = document.getElementById("btnUsMemories");
+const btnUsNotes = document.getElementById("btnUsNotes");
+const usBox = document.getElementById("usBox");
+const btnUsBack = document.getElementById("btnUsBack");
+const btnUsGoVal = document.getElementById("btnUsGoVal");
+
+
 // ===== QUIZ (οι δικές σου ερωτήσεις) =====
 const QUIZ = [
   {
@@ -146,7 +148,7 @@ const QUIZ = [
     loseText: "😌 Όχι μωρό… ήταν το «Ήσουν χθες Αλχεμι;»."
   },
   {
-    q: "Πού πήγαμε πρώτη φορά μόνoi μας;",
+    q: "Πού πήγαμε πρώτη φορά μόνες μας;",
     options: ["Ναύπλιο", "Αθήνα", "Χαλκίδα"],
     correct: 0,
     winText: "💘 Σωστό. Ναύπλιο και αναμνήσεις.",
@@ -154,16 +156,19 @@ const QUIZ = [
   },
   {
     q: "Πότε είπαμε το πρώτο «σ’ αγαπώ»;",
-    options: ["Δεν το έχουμε πεί", "Την πρώτη μέρα", "Στη βίλα"],
+    options: ["Δεν το είπαμε", "Την πρώτη μέρα", "Στη βίλα"],
     correct: 2,
     winText: "❤️ Στη βίλα. Πάντα εκεί θα μένει.",
     loseText: "🥺 Όχι… στη βίλα."
   }
 ];
 
+
 // ===== STATE =====
-let current = 0; // index στα steps (0..6)
+let current = 0;
 let futureIndex = 0;
+
+let APP_MODE = null; // "valentine" | "us"
 
 // Puzzle state
 let puzzleLockedCount = 0;
@@ -173,12 +178,124 @@ let puzzleDone = false;
 let quizIndex = 0;
 let quizAnswers = Array(QUIZ.length).fill(null);
 
+
+// ===== HELPERS =====
+function vibrate(ms = 12) {
+  try { if (navigator.vibrate) navigator.vibrate(ms); } catch {}
+}
+
+function openModal(text) {
+  if (!modal || !modalText) return;
+  modalText.textContent = text;
+  modal.classList.remove("hidden");
+}
+
+function closeModalFn() {
+  if (!modal) return;
+  modal.classList.add("hidden");
+}
+
+function setProgress() {
+  const total = 7;
+  const value = Math.min(Math.max(current + 1, 1), total);
+  const pct = (value / total) * 100;
+  if (progressFill) progressFill.style.width = `${pct}%`;
+  if (progressText) progressText.textContent = `${value} / ${total}`;
+}
+
+function showStep(i) {
+  steps.forEach((s, idx) => s.classList.toggle("active", idx === i));
+  current = i;
+  setProgress();
+  afterStepChange();
+}
+
+function goTo(stepId) {
+  const idx = steps.findIndex((s) => s.id === stepId);
+  if (idx >= 0) showStep(idx);
+}
+
+
+// ===== STEP CHANGE HOOKS =====
+function afterStepChange() {
+  const active = steps[current];
+  if (!active) return;
+
+  if (active.id === "step2") {
+    requestAnimationFrame(() => requestAnimationFrame(() => initPuzzle()));
+  }
+
+  if (active.id === "stepQuiz") {
+    quizIndex = 0;
+    quizAnswers = Array(QUIZ.length).fill(null);
+
+    if (quizMini) quizMini.classList.add("hidden");
+    if (quizMiniEnd) quizMiniEnd.classList.add("hidden");
+    if (quizContinueWrap) quizContinueWrap.classList.add("hidden");
+
+    if (btnQuizNext) btnQuizNext.disabled = false;
+    if (btnQuizPrev) btnQuizPrev.disabled = false;
+
+    renderQuiz();
+  }
+}
+
+
+// ===== INTRO / MODE =====
+function openIntro() {
+  if (!intro) return;
+  intro.style.display = "";
+  intro.classList.remove("hide");
+}
+
+function closeIntro() {
+  if (!intro) return;
+
+  intro.classList.add("hide");
+  setTimeout(() => (intro.style.display = "none"), 360);
+
+  if (APP_MODE === "valentine") {
+    goTo("stepHeart");
+  } else if (APP_MODE === "us") {
+    goTo("stepUs");
+  } else {
+    goTo("stepHeart");
+  }
+}
+
+if (btnValentine) {
+  btnValentine.addEventListener("click", () => {
+    APP_MODE = "valentine";
+    closeIntro();
+  });
+}
+
+if (btnUs) {
+  btnUs.addEventListener("click", () => {
+    APP_MODE = "us";
+    closeIntro();
+  });
+}
+
+
+// ===== CONTENT SETUP =====
+if (audioBox) {
+  audioBox.innerHTML = `
+    <div style="opacity:.9;">Πάτα play…</div>
+    <audio controls style="width:100%; margin-top:10px;">
+      <source src="${VOICE_PATH}" type="audio/mpeg" />
+      Ο browser δεν υποστηρίζει audio.
+    </audio>
+  `;
+}
+
+
 // ===== QUIZ RENDER =====
 function renderQuiz() {
   if (!quizBox) return;
 
   const item = QUIZ[quizIndex];
-  const chosen = quizAnswers[quizIndex]; // null ή index επιλογής
+  const chosen = quizAnswers[quizIndex];
 
   quizBox.innerHTML = `
     <div class="quizQ" style="font-weight:900; font-size:18px; margin-bottom:12px;">
@@ -186,23 +303,17 @@ function renderQuiz() {
     </div>
 
     <div class="quizOpts">
-      ${item.options
-        .map(
-          (opt, i) => `
-          <button class="quizOpt ${chosen === i ? "selected" : ""}" data-i="${i}" type="button">
-            ${opt}
-          </button>
-        `
-        )
-        .join("")}
+      ${item.options.map((opt, i) => `
+        <button class="quizOpt ${chosen === i ? "selected" : ""}" data-i="${i}" type="button">
+          ${opt}
+        </button>
+      `).join("")}
     </div>
 
     <div class="quizFeedback" id="quizFeedback" style="margin-top:12px; opacity:.9;">
       ${
         chosen !== null
-          ? chosen === item.correct
-            ? item.winText
-            : item.loseText
+          ? (chosen === item.correct ? item.winText : item.loseText)
           : ""
       }
     </div>
@@ -253,92 +364,6 @@ if (btnQuizContinue) {
   });
 }
 
-// ===== HELPERS =====
-function vibrate(ms = 12) {
-  try {
-    if (navigator.vibrate) navigator.vibrate(ms);
-  } catch {}
-}
-
-function openModal(text) {
-  if (!modal || !modalText) return;
-  modalText.textContent = text;
-  modal.classList.remove("hidden");
-}
-function closeModalFn() {
-  if (!modal) return;
-  modal.classList.add("hidden");
-}
-
-function setProgress() {
-  const total = 7;
-  const value = Math.min(Math.max(current + 1, 1), total);
-  const pct = (value / total) * 100;
-
-  if (progressFill) progressFill.style.width = `${pct}%`;
-  if (progressText) progressText.textContent = `${value} / ${total}`;
-}
-
-function showStep(i) {
-  steps.forEach((s, idx) => s.classList.toggle("active", idx === i));
-  current = i;
-  setProgress();
-  afterStepChange();
-}
-
-function goTo(stepId) {
-  const idx = steps.findIndex((s) => s.id === stepId);
-  if (idx >= 0) showStep(idx);
-}
-
-// ===== STEP CHANGE HOOKS =====
-function afterStepChange() {
-  const active = steps[current];
-  if (!active) return;
-
-  if (active.id === "step2") {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => initPuzzle());
-    });
-  }
-
-  if (active.id === "stepQuiz") {
-    quizIndex = 0;
-    quizAnswers = Array(QUIZ.length).fill(null);
-
-    if (quizMini) quizMini.classList.add("hidden");
-    if (quizMiniEnd) quizMiniEnd.classList.add("hidden");
-    if (quizContinueWrap) quizContinueWrap.classList.add("hidden");
-
-    if (btnQuizNext) btnQuizNext.disabled = false;
-    if (btnQuizPrev) btnQuizPrev.disabled = false;
-
-    renderQuiz();
-  }
-}
-
-// ===== INTRO =====
-function closeIntro() {
-  if (!intro) return;
-  intro.classList.add("hide");
-  setTimeout(() => (intro.style.display = "none"), 360);
-}
-if (btnUs) btnUs.addEventListener("click", closeIntro);
-if (intro)
-  intro.addEventListener("click", (e) => {
-    if (e.target === intro) closeIntro();
-  });
-
-// ===== CONTENT SETUP =====
-if (audioBox) {
-  audioBox.innerHTML = `
-    <div style="opacity:.9;">Πάτα play…</div>
-    <audio controls style="width:100%; margin-top:10px;">
-      <source src="${VOICE_PATH}" type="audio/mpeg" />
-      Ο browser δεν υποστηρίζει audio.
-    </audio>
-  `;
-}
 
 // ===== NAV EVENTS =====
 if (btnNext2) btnNext2.addEventListener("click", () => goTo("step3"));
@@ -346,37 +371,136 @@ if (btnNextHoldWords) btnNextHoldWords.addEventListener("click", () => goTo("ste
 if (btnNext4) btnNext4.addEventListener("click", () => goTo("step5"));
 if (btnNext5) btnNext5.addEventListener("click", () => goTo("stepQuiz"));
 
+
 // ===== FUTURE =====
+let futureDone = false;
+
 if (btnFutureNext) {
   btnFutureNext.addEventListener("click", () => {
+    if (futureDone) {
+      goTo("step7");
+      return;
+    }
+
     const card = FUTURE_CARDS[futureIndex % FUTURE_CARDS.length];
+
     if (futurePanel) {
       futurePanel.innerHTML = `
         ${card.img ? `<img class="futureImg" src="${card.img}" alt="${card.title}">` : ""}
         <div style="font-weight:950; margin-bottom:6px;">${card.title}</div>
         <div style="opacity:.9; line-height:1.45;">${card.text}</div>
       `;
-
     }
+
     futureIndex++;
 
     if (futureIndex >= FUTURE_CARDS.length) {
       btnFutureNext.textContent = "Συνέχεια";
-      btnFutureNext.onclick = () => goTo("step7");
+      futureDone = true;
     }
   });
 }
 
+
+// ===== US MODE (ΕΜΕΙΣ) =====
+if (btnUsCheckin) {
+  btnUsCheckin.addEventListener("click", () => {
+    if (!usBox) return;
+
+    usBox.innerHTML = `
+      <div style="font-weight:900; margin-bottom:6px;">✅ Check-in</div>
+      <div style="opacity:.9;">Σήμερα θέλω από εμάς:</div>
+      <div style="margin-top:10px; display:grid; gap:8px;">
+        <button class="btn ghost" type="button" id="needHug">🤗 Αγκαλιά</button>
+        <button class="btn ghost" type="button" id="needTalk">💬 Να μιλήσουμε</button>
+        <button class="btn ghost" type="button" id="needCalm">🕊️ Ηρεμία</button>
+      </div>
+      <div style="opacity:.75; font-size:13px; margin-top:8px;">(Αποθηκεύεται στο κινητό)</div>
+    `;
+
+    const save = (text) => {
+      localStorage.setItem("us_last_checkin", text);
+      if (usBox) usBox.innerHTML = `💘 Σημειώθηκε: <b>${text}</b><br><span style="opacity:.85;">(μένει στο κινητό)</span>`;
+    };
+
+    const needHug = document.getElementById("needHug");
+    const needTalk = document.getElementById("needTalk");
+    const needCalm = document.getElementById("needCalm");
+
+    if (needHug) needHug.addEventListener("click", () => save("Αγκαλιά"));
+    if (needTalk) needTalk.addEventListener("click", () => save("Να μιλήσουμε"));
+    if (needCalm) needCalm.addEventListener("click", () => save("Ηρεμία"));
+  });
+}
+
+if (btnUsMemories) {
+  btnUsMemories.addEventListener("click", () => {
+    if (!usBox) return;
+    usBox.innerHTML = `
+      <div style="font-weight:900; margin-bottom:6px;">📸 Στιγμές</div>
+      <div style="opacity:.9;">Αυτό θα γίνει το “άλμπουμ” μας.</div>
+      <div style="opacity:.75; font-size:13px; margin-top:8px;">
+        (Επόμενο βήμα: να προσθέτεις φωτο + λεζάντα και να μένουν εδώ.)
+      </div>
+    `;
+  });
+}
+
+if (btnUsNotes) {
+  btnUsNotes.addEventListener("click", () => {
+    if (!usBox) return;
+
+    const prev = localStorage.getItem("us_note") || "";
+    usBox.innerHTML = `
+      <div style="font-weight:900; margin-bottom:6px;">📝 Σημειώσεις</div>
+      <textarea id="usNote" placeholder="Γράψε κάτι που θες να θυμόμαστε…"
+        style="width:100%; min-height:100px; border-radius:14px; padding:12px; border:1px solid rgba(255,255,255,.18); background: rgba(0,0,0,.22); color:white;">${prev}</textarea>
+      <div class="actionCenter" style="margin-top:10px;">
+        <button class="btn primary" id="saveUsNote" type="button">Αποθήκευση</button>
+      </div>
+      <div style="opacity:.75; font-size:13px; margin-top:6px;">Αποθηκεύεται μόνο σε αυτό το κινητό.</div>
+    `;
+
+    const saveBtn = document.getElementById("saveUsNote");
+    const ta = document.getElementById("usNote");
+    if (saveBtn && ta) {
+      saveBtn.addEventListener("click", () => {
+        localStorage.setItem("us_note", ta.value);
+        usBox.innerHTML = "✅ Αποθηκεύτηκε. 💘";
+      });
+    }
+  });
+}
+
+if (btnUsBack) {
+  btnUsBack.addEventListener("click", () => {
+    openIntro();
+  });
+}
+
+if (btnUsGoVal) {
+  btnUsGoVal.addEventListener("click", () => {
+    APP_MODE = "valentine";
+    goTo("stepHeart");
+  });
+}
+
+
+// ===== FINAL =====
 if (btnYes) {
   btnYes.addEventListener("click", () => {
     openModal(`Το κρατάω αυτό 💘\nΧρόνια πολλά, ${HER_NAME}. Σε διαλέγω. Σήμερα και πάντα.`);
   });
 }
+
 if (modalClose) modalClose.addEventListener("click", closeModalFn);
-if (modal)
+
+if (modal) {
   modal.addEventListener("click", (e) => {
     if (e.target === modal) closeModalFn();
   });
+}
+
 
 // ===== BOOM: sparks =====
 function spawnSpark(type = "mix") {
@@ -399,6 +523,7 @@ function spawnSpark(type = "mix") {
   sparks.appendChild(el);
   el.addEventListener("animationend", () => el.remove());
 }
+
 
 // ===== HEART HOLD-TO-REVEAL + RING =====
 let holding = false;
@@ -500,6 +625,7 @@ function bindHold(el) {
 
 bindHold(heartWrap);
 bindHold(heartIcon);
+
 
 // ===== MINI PUZZLE 2x3 (STEP 2) =====
 function initPuzzle() {
@@ -656,6 +782,7 @@ if (btnPuzzleReset) {
   });
 }
 
+
 // ===== HOLD WORDS (3s) =====
 let holdingWords = false;
 let wordsRaf = null;
@@ -746,10 +873,10 @@ if (holdWordsWrap) {
   holdWordsWrap.addEventListener("pointerleave", endWordsHold);
 }
 
+
 // ===== INIT =====
 applyReveal(0);
-showStep(0);
 setProgress();
 
-
-
+// (Αν θες να φαίνεται μόνο το intro μέχρι να διαλέξει mode, άφησέ το έτσι:)
+steps.forEach((s) => s.classList.remove("active"));
