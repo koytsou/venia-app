@@ -1,5 +1,5 @@
 // ===== LOCK SCREEN =====
-const LOCK_CODE = "14/6/24";
+const LOCK_CODE = "140624";
 
 const lockScreen = document.getElementById("lockScreen");
 const lockInput  = document.getElementById("lockInput");
@@ -750,4 +750,5 @@ if (holdWordsWrap) {
 applyReveal(0);
 showStep(0);
 setProgress();
+
 
