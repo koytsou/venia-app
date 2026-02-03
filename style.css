@@ -970,3 +970,228 @@ body{
 @media (max-width: 420px){
   .usGrid{ grid-template-columns: 1fr; }
 }
+/* ===== Moments (Instagram-like) ===== */
+.momentsPage { padding: 14px; }
+
+.momTop{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:10px; margin-bottom:12px;
+}
+.momTitle{ font-weight:950; letter-spacing:.2px; }
+
+.momGrid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+}
+
+.momTile{
+  border-radius:14px;
+  overflow:hidden;
+  background: rgba(0,0,0,.25);
+  border: 1px solid rgba(255,255,255,.10);
+  aspect-ratio: 1 / 1;
+  position: relative;
+}
+.momTile img{
+  width:100%; height:100%;
+  object-fit: cover;
+  display:block;
+  transform: scale(1.02);
+}
+/* ===== Fullscreen Reels Viewer (swipe up/down) ===== */
+.momReels{
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(10, 6, 12, .96);
+  backdrop-filter: blur(10px);
+}
+.momReels.hidden{ display:none; }
+
+.momReelsClose{
+  position:absolute;
+  top: max(12px, env(safe-area-inset-top));
+  left: 12px;
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(0,0,0,.35);
+  color: #fff;
+  font-size: 20px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.momReelsHint{
+  position:absolute;
+  top: max(16px, env(safe-area-inset-top));
+  left: 0; right: 0;
+  text-align:center;
+  font-size: 13px;
+  opacity: .85;
+  pointer-events:none;
+}
+
+/* SCROLL CONTAINER */
+.momReelsList{
+  height: 100vh;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ΚΑΘΕ POST */
+.reelItem{
+  height: 100vh;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ΦΩΤΟ */
+.reelMedia{
+  flex: 1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding: 8px;
+}
+
+.reelMedia img{
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  object-fit: contain; /* δεν κόβει */
+  display:block;
+}
+
+/* ΛΕΖΑΝΤΑ / META */
+.reelCaption{
+  padding: 12px 14px calc(18px + env(safe-area-inset-bottom));
+  background: linear-gradient(to top, rgba(0,0,0,.65), rgba(0,0,0,.15));
+  border-top: 1px solid rgba(255,255,255,.12);
+  font-size: 15px;
+}
+
+/* ΗΜΕΡΟΜΗΝΙΑ + DELETE */
+.reelMeta{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:6px;
+}
+
+.reelDate{
+  font-size:13px;
+  opacity:.75;
+}
+
+/* ΛΕΖΑΝΤΑ */
+.reelText{
+  line-height:1.35;
+  opacity:.95;
+}
+
+/* DELETE BUTTON */
+.reelDelete{
+  background: transparent;
+  border: none;
+  color: #ff4d4f;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 6px 8px;
+  border-radius: 10px;
+}
+
+.reelDelete:active{
+  background: rgba(255,77,79,.18);
+}
+
+
+/* ===== Add moment modal (ΤΕΛΕΙΑ ΚΕΝΤΡΑΡΙΣΜΕΝΟ) ===== */
+.momAdd{
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 16px;
+}
+
+.momAdd.hidden{
+  display: none;
+}
+
+/* backdrop */
+.momAddBackdrop{
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(6px);
+}
+
+/* το modal */
+.momAddCard{
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  gap: 12px;
+
+  background: rgba(18,10,16,.96);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 22px;
+  padding: 16px;
+
+  box-shadow: 0 20px 50px rgba(0,0,0,.55);
+  z-index: 1;
+}
+#pickPhoto{
+  margin-bottom: 4px;
+}
+#momentCaption{
+  margin-top: 6px;
+}
+/* κουμπιά */
+.momActions{
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.momActions .btn{
+  flex: 1;
+}
+/* ===== Page transition ===== */
+.app.fadeOut {
+  animation: appFadeOut .35s ease forwards;
+}
+
+.app.fadeIn {
+  animation: appFadeIn .45s ease forwards;
+}
+
+@keyframes appFadeOut {
+  to {
+    opacity: 0;
+    transform: scale(.98);
+  }
+}
+
+@keyframes appFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(1.02);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+
