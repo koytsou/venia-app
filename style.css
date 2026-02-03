@@ -1059,7 +1059,7 @@ body{
 
 /* ΦΩΤΟ */
 .reelMedia{
-  flex: 1;
+  flex: 0 0 66vh;
   min-height: 0;
   display:flex;
   align-items:center;
@@ -1158,6 +1158,7 @@ body{
   margin-top:14px;
 }
 .momActions .btn{ flex:1; }
+
 
 
 
