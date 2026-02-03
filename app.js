@@ -330,19 +330,19 @@ function openReels(startIndex = 0) {
   momReelsList.innerHTML = momentsList.map(m => `
     <div class="reelItem">
       <div class="reelMedia">
-        <img src="${m.imageUrl}">
+        <img src="${m.imageUrl}" alt="moment">
       </div>
 
       <div class="reelCaption">
         <div class="reelMeta">
           <div class="reelDate">${fmtDate(m.createdAt)}</div>
-          <button class="reelDelete" data-id="${m.id}">🗑️ Διαγραφή</button>
+          <button class="reelDelete" data-id="${m.id}" type="button">🗑️ Διαγραφή</button>
         </div>
         <div class="reelText">${esc(m.caption)}</div>
       </div>
+    </div>
   `).join("");
 
-  // 🔴 ΕΔΩ ΗΤΑΝ ΤΟ ΠΡΟΒΛΗΜΑ
   momReelsList.querySelectorAll(".reelDelete").forEach(btn => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -360,6 +360,7 @@ function openReels(startIndex = 0) {
     if (el) el.scrollIntoView({ block: "start" });
   });
 }
+
 
 document.getElementById("btnCancelMoment")
   ?.addEventListener("click", closeAddMoment);
