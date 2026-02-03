@@ -1,882 +1,336 @@
-// ===== LOCK SCREEN =====
-const LOCK_CODE = "140624";
-
-const lockScreen = document.getElementById("lockScreen");
-const lockInput  = document.getElementById("lockInput");
-const lockBtn    = document.getElementById("lockBtn");
-const lockError  = document.getElementById("lockError");
-
-function hideLock() {
-  if (!lockScreen) return;
-  lockScreen.classList.add("fadeOut");
-  setTimeout(() => {
-    lockScreen.style.display = "none";
-  }, 320);
-}
-
-function tryUnlock() {
-  if (!lockInput) return;
-
-  // δέχεται και με κενά / με / κλπ -> κρατάμε μόνο ψηφία
-  const val = lockInput.value.replace(/\D/g, "").trim();
-
-  if (val === LOCK_CODE) {
-    if (lockError) lockError.classList.add("hidden");
-    hideLock();
-  } else {
-    if (lockError) lockError.classList.remove("hidden");
-    lockInput.value = "";
-    try { if (navigator.vibrate) navigator.vibrate(18); } catch {}
-  }
-}
-
-// focus στο input όταν ανοίγει
-setTimeout(() => { try { lockInput && lockInput.focus(); } catch {} }, 150);
-
-if (lockBtn) lockBtn.addEventListener("click", tryUnlock);
-if (lockInput) {
-  lockInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") tryUnlock();
-  });
-}
-
-
-// ===== ΡΥΘΜΙΣΕΙΣ =====
-const HER_NAME = "αγάπη μου";
-const PHOTO_PATH = "assets/slide1.jpg"; // ίδια φωτο για heart reveal
-const PUZZLE_PHOTO = "assets/puzzle.jpg";
-const VOICE_PATH = "assets/voice.mp3";
-const SPOTIFY_LINK = "https://open.spotify.com/track/XXXXXXXXXXXX";
-
-const FUTURE_CARDS = [
-  {
-    title: "🎓 Το πτυχίο μας",
-    text: "Να το πάρουμε μαζί. Να λέμε «τα καταφέραμε» και να το γιορτάσουμε όπως μόνο εμείς ξέρουμε. 💘",
-    img: "assets/ptyxio.jpg"
-  },
-  {
-    title: "📍 Ταξίδι",
-    text: "Θέλω ένα ταξίδι μόνο για εμάς… να χαθούμε και να γελάμε όλη μέρα.",
-    img: "assets/taxidi.jpg"
-  },
-  {
-    title: "🏠 Σπίτι",
-    text: "Ένα σπίτι με ζεστό φως, μουσική, και μια γωνιά που θα είναι “η γωνιά μας”.",
-    img: "assets/spiti.jpg"
-  }
-];
-
-
-// ===== DOM =====
-const intro = document.getElementById("intro");
-const btnUs = document.getElementById("btnUs");
-const btnValentine = document.getElementById("btnValentine");
-
-const steps = [...document.querySelectorAll(".step")];
-const progressFill = document.getElementById("progressFill");
-const progressText = document.getElementById("progressText");
-
-const audioBox = document.getElementById("audioBox");
-
-const btnNext2 = document.getElementById("btnNext2"); // από puzzle
-const btnNext4 = document.getElementById("btnNext4"); // από song
-const btnNext5 = document.getElementById("btnNext5"); // από voice
-
-const futurePanel = document.getElementById("futurePanel");
-const btnFutureNext = document.getElementById("btnFutureNext");
-
-const btnYes = document.getElementById("btnYes");
-
-const modal = document.getElementById("modal");
-const modalText = document.getElementById("modalText");
-const modalClose = document.getElementById("modalClose");
-
-// Heart step
-const heartWrap = document.getElementById("heartWrap");
-const heartIcon = document.getElementById("heartIcon");
-const heartText = document.getElementById("heartText");
-const revealImg = document.getElementById("revealImg");
-const holdHint = document.getElementById("holdHint");
-
-// Boom UI
-const ringFill = document.getElementById("ringFill");
-const sparks = document.getElementById("sparks");
-
-// Puzzle DOM
-const puzzleBoard = document.getElementById("puzzleBoard");
-const puzzleText = document.getElementById("puzzleText");
-const puzzleBadge = document.getElementById("puzzleBadge");
-const btnPuzzleReset = document.getElementById("btnPuzzleReset");
-const puzzleMini = document.getElementById("puzzleMini");
-
-// HoldWords (step3)
-const holdWordsWrap = document.getElementById("holdWordsWrap");
-const holdWordsBig = document.getElementById("holdWordsBig");
-const holdWordsHint = document.getElementById("holdWordsHint");
-const holdWordsBarFill = document.getElementById("holdWordsBarFill");
-const btnNextHoldWords = document.getElementById("btnNextHoldWords");
-
-// Quiz DOM
-const quizBox = document.getElementById("quizBox");
-const btnQuizPrev = document.getElementById("btnQuizPrev");
-const btnQuizNext = document.getElementById("btnQuizNext");
-const quizMini = document.getElementById("quizMini");
-const quizMiniEnd = document.getElementById("quizMiniEnd");
-const quizContinueWrap = document.getElementById("quizContinueWrap");
-const btnQuizContinue = document.getElementById("btnQuizContinue");
-
-// US mode DOM
-const btnUsCheckin = document.getElementById("btnUsCheckin");
-const btnUsMemories = document.getElementById("btnUsMemories");
-const btnUsNotes = document.getElementById("btnUsNotes");
-const usBox = document.getElementById("usBox");
-const btnUsBack = document.getElementById("btnUsBack");
-const btnUsGoVal = document.getElementById("btnUsGoVal");
-
-
-// ===== QUIZ (οι δικές σου ερωτήσεις) =====
-const QUIZ = [
-  {
-    q: "Ποιο ήταν το πρώτο μνμ μου;",
-    options: [
-      "Είσαι πολύ όμορφη",
-      "Ήσουν χθες Αλχεμι;",
-      "Ο κώλος σου είναι iconic"
-    ],
-    correct: 1,
-    winText: "🥹 ΝΑΙ. Το θυμάσαι τέλεια.",
-    loseText: "😌 Όχι μωρό… ήταν το «Ήσουν χθες Αλχεμι;»."
-  },
-  {
-    q: "Πού πήγαμε πρώτη φορά μόνες μας;",
-    options: ["Ναύπλιο", "Αθήνα", "Χαλκίδα"],
-    correct: 0,
-    winText: "💘 Σωστό. Ναύπλιο και αναμνήσεις.",
-    loseText: "🙈 Όχι… Ναύπλιο ήταν."
-  },
-  {
-    q: "Πότε είπαμε το πρώτο «σ’ αγαπώ»;",
-    options: ["Δεν το είπαμε", "Την πρώτη μέρα", "Στη βίλα"],
-    correct: 2,
-    winText: "❤️ Στη βίλα. Πάντα εκεί θα μένει.",
-    loseText: "🥺 Όχι… στη βίλα."
-  }
-];
-
-
-// ===== STATE =====
-let current = 0;
-let futureIndex = 0;
-
-let APP_MODE = null; // "valentine" | "us"
-
-// Puzzle state
-let puzzleLockedCount = 0;
-let puzzleDone = false;
-
-// Quiz state
-let quizIndex = 0;
-let quizAnswers = Array(QUIZ.length).fill(null);
-
-
-// ===== HELPERS =====
-function vibrate(ms = 12) {
-  try { if (navigator.vibrate) navigator.vibrate(ms); } catch {}
-}
-
-function openModal(text) {
-  if (!modal || !modalText) return;
-  modalText.textContent = text;
-  modal.classList.remove("hidden");
-}
-
-function closeModalFn() {
-  if (!modal) return;
-  modal.classList.add("hidden");
-}
-
-function setProgress() {
-  const total = 7;
-  const value = Math.min(Math.max(current + 1, 1), total);
-  const pct = (value / total) * 100;
-  if (progressFill) progressFill.style.width = `${pct}%`;
-  if (progressText) progressText.textContent = `${value} / ${total}`;
-}
-
-function showStep(i) {
-  steps.forEach((s, idx) => s.classList.toggle("active", idx === i));
-  current = i;
-  setProgress();
-  afterStepChange();
-}
-
-function goTo(stepId) {
-  const idx = steps.findIndex((s) => s.id === stepId);
-  if (idx >= 0) showStep(idx);
-}
-
-
-// ===== STEP CHANGE HOOKS =====
-function afterStepChange() {
-  const active = steps[current];
-  if (!active) return;
-
-  if (active.id === "step2") {
-    requestAnimationFrame(() => requestAnimationFrame(() => initPuzzle()));
-  }
-
-  if (active.id === "stepQuiz") {
-    quizIndex = 0;
-    quizAnswers = Array(QUIZ.length).fill(null);
-
-    if (quizMini) quizMini.classList.add("hidden");
-    if (quizMiniEnd) quizMiniEnd.classList.add("hidden");
-    if (quizContinueWrap) quizContinueWrap.classList.add("hidden");
-
-    if (btnQuizNext) btnQuizNext.disabled = false;
-    if (btnQuizPrev) btnQuizPrev.disabled = false;
-
-    renderQuiz();
-  }
-}
-
-
-// ===== INTRO / MODE =====
-function openIntro() {
-  if (!intro) return;
-  intro.style.display = "";
-  intro.classList.remove("hide");
-}
-
-function closeIntro() {
-  if (!intro) return;
-
-  intro.classList.add("hide");
-  setTimeout(() => (intro.style.display = "none"), 360);
-
-  if (APP_MODE === "valentine") {
-    goTo("stepHeart");
-  } else if (APP_MODE === "us") {
-    goTo("stepUs");
-  } else {
-    goTo("stepHeart");
-  }
-}
-
-if (btnValentine) {
-  btnValentine.addEventListener("click", () => {
-    APP_MODE = "valentine";
-    closeIntro();
-  });
-}
-
-if (btnUs) {
-  btnUs.addEventListener("click", () => {
-    APP_MODE = "us";
-    closeIntro();
-  });
-}
-
-
-// ===== CONTENT SETUP =====
-if (audioBox) {
-  audioBox.innerHTML = `
-    <div style="opacity:.9;">Πάτα play…</div>
-    <audio controls style="width:100%; margin-top:10px;">
-      <source src="${VOICE_PATH}" type="audio/mpeg" />
-      Ο browser δεν υποστηρίζει audio.
-    </audio>
-  `;
-}
-
-
-// ===== QUIZ RENDER =====
-function renderQuiz() {
-  if (!quizBox) return;
-
-  const item = QUIZ[quizIndex];
-  const chosen = quizAnswers[quizIndex];
-
-  quizBox.innerHTML = `
-    <div class="quizQ" style="font-weight:900; font-size:18px; margin-bottom:12px;">
-      ${item.q}
-    </div>
-
-    <div class="quizOpts">
-      ${item.options.map((opt, i) => `
-        <button class="quizOpt ${chosen === i ? "selected" : ""}" data-i="${i}" type="button">
-          ${opt}
-        </button>
-      `).join("")}
-    </div>
-
-    <div class="quizFeedback" id="quizFeedback" style="margin-top:12px; opacity:.9;">
-      ${
-        chosen !== null
-          ? (chosen === item.correct ? item.winText : item.loseText)
-          : ""
-      }
-    </div>
-  `;
-
-  [...quizBox.querySelectorAll(".quizOpt")].forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const i = parseInt(btn.dataset.i, 10);
-      quizAnswers[quizIndex] = i;
-      renderQuiz();
-    });
-  });
-
-  if (btnQuizPrev) btnQuizPrev.disabled = quizIndex === 0;
-}
-
-if (btnQuizPrev) {
-  btnQuizPrev.addEventListener("click", () => {
-    if (quizIndex > 0) {
-      quizIndex--;
-      renderQuiz();
-    }
-  });
-}
-
-if (btnQuizNext) {
-  btnQuizNext.addEventListener("click", () => {
-    if (quizAnswers[quizIndex] == null) return;
-
-    if (quizIndex < QUIZ.length - 1) {
-      quizIndex++;
-      renderQuiz();
-      return;
-    }
-
-    if (quizMini) quizMini.classList.remove("hidden");
-    if (quizMiniEnd) quizMiniEnd.classList.remove("hidden");
-    if (quizContinueWrap) quizContinueWrap.classList.remove("hidden");
-
-    if (btnQuizNext) btnQuizNext.disabled = true;
-    if (btnQuizPrev) btnQuizPrev.disabled = true;
-  });
-}
-
-if (btnQuizContinue) {
-  btnQuizContinue.addEventListener("click", () => {
-    goTo("stepFuture");
-  });
-}
-
-
-// ===== NAV EVENTS =====
-if (btnNext2) btnNext2.addEventListener("click", () => goTo("step3"));
-if (btnNextHoldWords) btnNextHoldWords.addEventListener("click", () => goTo("step4"));
-if (btnNext4) btnNext4.addEventListener("click", () => goTo("step5"));
-if (btnNext5) btnNext5.addEventListener("click", () => goTo("stepQuiz"));
-
-
-// ===== FUTURE =====
-let futureDone = false;
-
-if (btnFutureNext) {
-  btnFutureNext.addEventListener("click", () => {
-    if (futureDone) {
-      goTo("step7");
-      return;
-    }
-
-    const card = FUTURE_CARDS[futureIndex % FUTURE_CARDS.length];
-
-    if (futurePanel) {
-      futurePanel.innerHTML = `
-        ${card.img ? `<img class="futureImg" src="${card.img}" alt="${card.title}">` : ""}
-        <div style="font-weight:950; margin-bottom:6px;">${card.title}</div>
-        <div style="opacity:.9; line-height:1.45;">${card.text}</div>
-      `;
-    }
-
-    futureIndex++;
-
-    if (futureIndex >= FUTURE_CARDS.length) {
-      btnFutureNext.textContent = "Συνέχεια";
-      futureDone = true;
-    }
-  });
-}
-
-
-// ===== US MODE (ΕΜΕΙΣ) =====
-if (btnUsCheckin) {
-  btnUsCheckin.addEventListener("click", () => {
-    if (!usBox) return;
-
-    usBox.innerHTML = `
-      <div style="font-weight:900; margin-bottom:6px;">✅ Check-in</div>
-      <div style="opacity:.9;">Σήμερα θέλω από εμάς:</div>
-      <div style="margin-top:10px; display:grid; gap:8px;">
-        <button class="btn ghost" type="button" id="needHug">🤗 Αγκαλιά</button>
-        <button class="btn ghost" type="button" id="needTalk">💬 Να μιλήσουμε</button>
-        <button class="btn ghost" type="button" id="needCalm">🕊️ Ηρεμία</button>
+<!doctype html>
+<html lang="el">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Για Εσένα 💘</title>
+
+  <meta name="theme-color" content="#ff3b6b" />
+  <meta name="description" content="Ένα μικρό δώρο για σένα 💘" />
+
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="style.css" />
+
+  <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png?v=2">
+  <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png?v=2">
+
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=2">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png?v=2">
+</head>
+
+<body>
+
+  <!-- LOCK SCREEN -->
+  <div class="lockScreen" id="lockScreen">
+    <div class="lockCard">
+      <div class="lockEmoji">🔐💘</div>
+      <div class="lockTitle">Μόνο για εμάς</div>
+      <div class="lockText">Βάλε την ημερομηνία που ξεκίνησαν όλα…</div>
+
+      <input
+        type="text"
+        id="lockInput"
+        placeholder="π.χ. **/*/**"
+        inputmode="numeric"
+        autocomplete="off"
+      />
+
+      <button class="btn primary" id="lockBtn" type="button">Ξεκλείδωσε 💕</button>
+
+      <div class="lockError hidden" id="lockError">
+        ❌ Όχι μωρό… δοκίμασε ξανά 💘
       </div>
-      <div style="opacity:.75; font-size:13px; margin-top:8px;">(Αποθηκεύεται στο κινητό)</div>
-    `;
+    </div>
+  </div>
 
-    const save = (text) => {
-      localStorage.setItem("us_last_checkin", text);
-      if (usBox) usBox.innerHTML = `💘 Σημειώθηκε: <b>${text}</b><br><span style="opacity:.85;">(μένει στο κινητό)</span>`;
-    };
 
-    const needHug = document.getElementById("needHug");
-    const needTalk = document.getElementById("needTalk");
-    const needCalm = document.getElementById("needCalm");
-
-    if (needHug) needHug.addEventListener("click", () => save("Αγκαλιά"));
-    if (needTalk) needTalk.addEventListener("click", () => save("Να μιλήσουμε"));
-    if (needCalm) needCalm.addEventListener("click", () => save("Ηρεμία"));
-  });
-}
-
-if (btnUsMemories) {
-  btnUsMemories.addEventListener("click", () => {
-    if (!usBox) return;
-    usBox.innerHTML = `
-      <div style="font-weight:900; margin-bottom:6px;">📸 Στιγμές</div>
-      <div style="opacity:.9;">Αυτό θα γίνει το “άλμπουμ” μας.</div>
-      <div style="opacity:.75; font-size:13px; margin-top:8px;">
-        (Επόμενο βήμα: να προσθέτεις φωτο + λεζάντα και να μένουν εδώ.)
+  <!-- INTRO / MODE SELECT OVERLAY -->
+  <div class="intro" id="intro">
+    <div class="introCard">
+      <div class="introGift" aria-hidden="true">
+        <div class="introGlow"></div>
+        <div class="introEmoji">🎁</div>
       </div>
-    `;
-  });
-}
 
-if (btnUsNotes) {
-  btnUsNotes.addEventListener("click", () => {
-    if (!usBox) return;
+      <div class="introTitle">Πώς θέλεις να μπούμε σήμερα;</div>
+      <div class="introText">Διάλεξε ένα από τα δύο… 💘</div>
 
-    const prev = localStorage.getItem("us_note") || "";
-    usBox.innerHTML = `
-      <div style="font-weight:900; margin-bottom:6px;">📝 Σημειώσεις</div>
-      <textarea id="usNote" placeholder="Γράψε κάτι που θες να θυμόμαστε…"
-        style="width:100%; min-height:100px; border-radius:14px; padding:12px; border:1px solid rgba(255,255,255,.18); background: rgba(0,0,0,.22); color:white;">${prev}</textarea>
-      <div class="actionCenter" style="margin-top:10px;">
-        <button class="btn primary" id="saveUsNote" type="button">Αποθήκευση</button>
+      <div class="modeBtns">
+        <button class="btn primary introBtn" id="btnValentine" type="button">🩷 Άγιος Βαλεντίνος</button>
+        <button class="btn ghost introBtn" id="btnUs" type="button">🤍 Εμείς</button>
       </div>
-      <div style="opacity:.75; font-size:13px; margin-top:6px;">Αποθηκεύεται μόνο σε αυτό το κινητό.</div>
-    `;
 
-    const saveBtn = document.getElementById("saveUsNote");
-    const ta = document.getElementById("usNote");
-    if (saveBtn && ta) {
-      saveBtn.addEventListener("click", () => {
-        localStorage.setItem("us_note", ta.value);
-        usBox.innerHTML = "✅ Αποθηκεύτηκε. 💘";
-      });
+      <div class="introHint">διάλεξε για να συνεχίσεις</div>
+    </div>
+  </div>
+
+
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">💘</div>
+        <div class="brandText">
+          <div class="brandTitle">Το δώρο μου</div>
+          <div class="brandSub" id="brandSub">για εσένα</div>
+        </div>
+      </div>
+
+      <div class="miniProgress">
+        <div class="progressBar" aria-hidden="true">
+          <div class="progressFill" id="progressFill"></div>
+        </div>
+        <div class="progressText" id="progressText">1 / 7</div>
+      </div>
+    </header>
+
+    <main class="main">
+      <!-- STEP 0: HEART -->
+      <section class="step active" id="stepHeart">
+        <div class="card hero oneCol heartStep">
+          <div class="heartWrap" id="heartWrap" aria-label="Κράτα πατημένη την καρδιά">
+            <div class="heartGlow"></div>
+
+            <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
+              <circle class="ringTrack" cx="60" cy="60" r="46"></circle>
+              <circle class="ringFill" id="ringFill" cx="60" cy="60" r="46"></circle>
+            </svg>
+
+            <div class="heartIcon" id="heartIcon">❤️</div>
+            <div class="sparks" id="sparks" aria-hidden="true"></div>
+          </div>
+
+          <div class="heartText" id="heartText">
+            Υπάρχουν στιγμές που αξίζει<br>να τις νιώσεις πρώτα.
+          </div>
+
+          <div class="photoReveal" id="photoReveal">
+            <img id="revealImg" src="assets/slide1.jpg" alt="Η στιγμή μας" />
+            <div class="holdHint" id="holdHint"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 1: PUZZLE -->
+      <section class="step" id="step2">
+        <div class="card reveal">
+          <div class="revealTitle">🧩 Μπεμπικινάκι μου</div>
+
+          <div class="puzzleWrap">
+            <div class="puzzleTop">
+              <div class="puzzleText" id="puzzleText">
+                Φτιάξε την φωτογραφία για να συνεχίσουμε…Αν και δεν είσαι καλή στα Παζλ 💘
+              </div>
+              <div class="puzzleBadge" id="puzzleBadge">0/6</div>
+            </div>
+
+            <div class="puzzleBoard" id="puzzleBoard" aria-label="Puzzle φωτογραφίας"></div>
+          </div>
+
+          <div class="puzzleActions">
+            <button class="btn ghost" id="btnPuzzleReset" type="button">Ξανά 🔄</button>
+            <button class="btn primary" id="btnNext2" type="button">Συνέχεια</button>
+          </div>
+
+          <div class="puzzleMini hidden" id="puzzleMini">
+            Συγνώμηηη δεν άντεξα...
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 2: HOLD WORDS -->
+      <section class="step" id="step3">
+        <div class="card hero oneCol heartStep">
+          <div class="holdWordsWrap" id="holdWordsWrap" aria-label="Κράτα πατημένο">
+            <div class="holdWordsGlow"></div>
+            <div class="holdWordsBig" id="holdWordsBig">Κράτα…</div>
+
+            <div class="holdWordsBar" aria-hidden="true">
+              <div class="holdWordsBarFill" id="holdWordsBarFill"></div>
+            </div>
+
+            <div class="holdWordsHint" id="holdWordsHint">Κράτα για 3 δευτερόλεπτα 💘</div>
+          </div>
+
+          <button class="btn primary hidden" id="btnNextHoldWords" type="button">
+            Συνέχεια ✨
+          </button>
+        </div>
+      </section>
+
+      <!-- STEP 3: Song -->
+      <section class="step" id="step4">
+        <div class="card reveal">
+          <div class="revealTitle">🎵 Το τραγούδι μας</div>
+
+          <div class="revealBody">
+            <div style="opacity:.9; margin-bottom:10px;">
+              Αυτό το τραγούδι μου θυμίζει εμάς.
+            </div>
+
+            <iframe data-testid="embed-iframe" style="border-radius:12px"
+              src="https://open.spotify.com/embed/track/0OwbEVwC2w9CgtS3RYcQlv?utm_source=generator"
+              width="100%" height="352" frameBorder="0" allowfullscreen=""
+              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+              loading="lazy"></iframe>
+          </div>
+
+          <div class="actionCenter">
+            <button class="btn primary" id="btnNext4">Συνέχεια</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 4: Voice -->
+      <section class="step" id="step5">
+        <div class="card reveal">
+          <div class="revealTitle">💌 Η φωνή μου</div>
+          <div class="revealBody" id="audioBox"></div>
+          <div class="actionCenter">
+            <button class="btn primary" id="btnNext5">Συνέχεια</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 5: QUIZ -->
+      <section class="step" id="stepQuiz">
+        <div class="card reveal">
+          <div class="revealTitle">🧠 Quiz για εμάς</div>
+          <p class="p" style="opacity:.9">3 μικρές ερωτήσεις… αν σε ξέρω καλά 💘</p>
+
+          <div class="quizBox" id="quizBox"></div>
+
+          <div class="quizActions">
+            <button class="btn ghost" id="btnQuizPrev" type="button">Πίσω</button>
+            <button class="btn primary" id="btnQuizNext" type="button">Επόμενο</button>
+          </div>
+
+          <div class="quizMini hidden" id="quizMiniEnd">
+            Ελπίζω να τα βρήκες όλα 💘
+          </div>
+
+          <div class="actionCenter hidden" id="quizContinueWrap">
+            <button class="btn primary" id="btnQuizContinue" type="button">Συνέχεια ✨</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 6: Future -->
+      <section class="step" id="stepFuture">
+        <div class="card">
+          <h2 class="h2">💍 Το μέλλον μας</h2>
+          <p class="p">Μερικά πράγματα που θέλω να ζήσουμε μαζί…</p>
+
+          <div class="panel" id="futurePanel">
+            Πάτα “Δείξε μου” — έχω κρύψει μικρά όνειρα για εμάς εδώ μέσα. 💘
+          </div>
+          <div class="actionCenter">
+            <button class="btn primary" id="btnFutureNext">Δείξε μου</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP US: ΕΜΕΙΣ -->
+      <section class="step" id="stepUs">
+        <div class="card">
+          <h2 class="h2">🤍 Εμείς</h2>
+          <p class="p">Ένα μικρό “σπίτι” για τη σχέση μας. Μένει εδώ… και μεγαλώνει μαζί μας.</p>
+
+          <div class="panel usPanel">
+            <div class="usGrid">
+              <button class="btn primary" id="btnUsCheckin" type="button">✅ Check-in</button>
+              <button class="btn ghost" id="btnUsMemories" type="button">📸 Στιγμές</button>
+              <button class="btn ghost" id="btnUsNotes" type="button">📝 Σημειώσεις</button>
+            </div>
+
+            <div class="usBox" id="usBox">
+              Πάτα ένα κουμπί… 💘
+            </div>
+          </div>
+
+          <div class="actionCenter" style="margin-top:12px;">
+            <button class="btn ghost" id="btnUsBack" type="button">⬅ Πίσω</button>
+            <button class="btn primary" id="btnUsGoVal" type="button">🩷 Πήγαινέ με στον Βαλεντίνο</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP MOMENTS: Instagram-style gallery + viewer -->
+      <section class="step" id="stepMoments">
+        <div class="card momentsPage">
+          <div class="momTop">
+            <button class="btn ghost" id="btnMomBack" type="button">⬅ Πίσω</button>
+            <div class="momTitle">📸 Στιγμές</div>
+            <button class="btn primary" id="btnMomAddOpen" type="button">＋</button>
+          </div>
+
+          <div class="momGrid" id="momGrid"></div>
+
+          <!-- FULLSCREEN REELS VIEWER -->
+          <div class="momReels hidden" id="momReels" aria-hidden="true">
+            <button class="momReelsClose" id="momReelsClose" type="button">✕</button>
+            <div class="momReelsHint">σύρε πάνω/κάτω 💘</div>
+
+            <div class="momReelsList" id="momReelsList"></div>
+          </div>
+
+
+          <!-- Add moment modal -->
+          <div class="momAdd hidden" id="momAdd">
+            <div class="momAddBackdrop" id="momAddBackdrop"></div>
+            <div class="momAddCard">
+              <div style="font-weight:900; margin-bottom:10px;">➕ Νέα Στιγμή</div>
+
+              <input id="momentFile" type="file" accept="image/*" hidden>
+              <button class="btn ghost" id="pickPhoto">📷 Διάλεξε φωτογραφία</button>
+
+              <input id="momentCaption" placeholder="Γράψε λεζάντα..." style="width:100%; padding:12px; border-radius:14px;">
+              <div class="momActions">
+                <button class="btn ghost" id="btnCancelMoment" type="button">Ακύρωση</button>
+                <button class="btn primary" id="btnAddMoment" type="button">Ανέβασε</button>
+              </div>
+
+              <div id="momentStatus" style="opacity:.8; margin-top:10px; font-size:13px;"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 7: Final -->
+      <section class="step" id="step7">
+        <div class="card">
+          <h2 class="h2">❓ Μια υπόσχεση</h2>
+          <p class="p bigQ" id="finalQuestion">
+            Υπόσχεσαι να είσαι και του χρόνου ο Βαλεντίνος μου;
+          </p>
+
+          <button class="btn primary" id="btnYes">Ναι ❤️</button>
+
+          <div class="quote" style="margin-top:10px;">
+            «Ό,τι κι αν έρθει… θέλω να είσαι εσύ.»
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- MODAL -->
+    <div class="modal hidden" id="modal" role="dialog" aria-modal="true">
+      <div class="modalCard">
+        <div class="modalIcon">💘</div>
+        <div class="modalTitle" id="modalTitle">🥹</div>
+        <div class="modalText" id="modalText"></div>
+        <div class="modalButtons">
+          <button class="btn primary" id="modalClose" type="button">ΟΚ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("sw.js");
     }
-  });
-}
-
-if (btnUsBack) {
-  btnUsBack.addEventListener("click", () => {
-    openIntro();
-  });
-}
-
-if (btnUsGoVal) {
-  btnUsGoVal.addEventListener("click", () => {
-    APP_MODE = "valentine";
-    goTo("stepHeart");
-  });
-}
-
-
-// ===== FINAL =====
-if (btnYes) {
-  btnYes.addEventListener("click", () => {
-    openModal(`Το κρατάω αυτό 💘\nΧρόνια πολλά, ${HER_NAME}. Σε διαλέγω. Σήμερα και πάντα.`);
-  });
-}
-
-if (modalClose) modalClose.addEventListener("click", closeModalFn);
-
-if (modal) {
-  modal.addEventListener("click", (e) => {
-    if (e.target === modal) closeModalFn();
-  });
-}
-
-
-// ===== BOOM: sparks =====
-function spawnSpark(type = "mix") {
-  if (!sparks) return;
-  const el = document.createElement("div");
-  el.className = "spark";
-
-  const roll = Math.random();
-  if (type === "burst") el.textContent = roll < 0.6 ? "💗" : "💘";
-  else el.textContent = roll < 0.5 ? "💗" : "✨";
-
-  const angle = Math.random() * Math.PI * 2;
-  const dist = 36 + Math.random() * 34;
-  const dx = Math.cos(angle) * dist;
-  const dy = Math.sin(angle) * dist;
-
-  el.style.setProperty("--dx", `${dx.toFixed(1)}px`);
-  el.style.setProperty("--dy", `${dy.toFixed(1)}px`);
-
-  sparks.appendChild(el);
-  el.addEventListener("animationend", () => el.remove());
-}
-
-
-// ===== HEART HOLD-TO-REVEAL + RING =====
-let holding = false;
-let raf = null;
-let progress = 0;
-let lastT = 0;
-const HOLD_DURATION = 1200;
-
-function applyReveal(p) {
-  const x = Math.max(0, Math.min(1, p));
-
-  if (revealImg) {
-    revealImg.style.opacity = String(x);
-    const blur = 14 * (1 - x);
-    const bright = 0.75 + 0.25 * x;
-    revealImg.style.filter = `blur(${blur.toFixed(1)}px) brightness(${bright.toFixed(2)})`;
-    const scale = 1.03 - 0.03 * x;
-    revealImg.style.transform = `scale(${scale.toFixed(3)})`;
-  }
-
-  if (ringFill) {
-    const CIRC = 289;
-    ringFill.style.strokeDashoffset = String(CIRC * (1 - x));
-  }
-}
-
-function tick(t) {
-  if (!holding) return;
-
-  if (!lastT) lastT = t;
-  const dt = t - lastT;
-  lastT = t;
-
-  progress += dt / HOLD_DURATION;
-  if (progress > 1) progress = 1;
-
-  applyReveal(progress);
-
-  if (Math.random() < 0.28) spawnSpark("mix");
-
-  if (progress >= 1) {
-    holding = false;
-    lastT = 0;
-
-    if (holdHint) holdHint.textContent = "✔ Έτοιμο. Πάτα για συνέχεια.";
-
-    if (heartWrap) {
-      heartWrap.classList.add("boom");
-      setTimeout(() => heartWrap.classList.remove("boom"), 650);
-      heartWrap.classList.remove("is-holding");
-    }
-
-    for (let i = 0; i < 12; i++) setTimeout(() => spawnSpark("burst"), i * 22);
-    vibrate(25);
-    return;
-  }
-
-  raf = requestAnimationFrame(tick);
-}
-
-function startHold() {
-  if (progress >= 1) return;
-  holding = true;
-  lastT = 0;
-
-  if (heartWrap) heartWrap.classList.add("is-holding");
-  if (heartText) heartText.innerHTML = "Αυτή είναι μία από αυτές.";
-  if (holdHint) holdHint.textContent = "";
-
-  vibrate(10);
-  raf = requestAnimationFrame(tick);
-}
-
-function endHold() {
-  if (!holding) return;
-  holding = false;
-  lastT = 0;
-  if (raf) cancelAnimationFrame(raf);
-
-  if (heartWrap) heartWrap.classList.remove("is-holding");
-
-  if (progress < 1) {
-    if (heartText) heartText.innerHTML = "Κράτα την καρδιά πατημένη…";
-  }
-}
-
-function tapAfterComplete() {
-  if (progress >= 1) goTo("step2");
-}
-
-function bindHold(el) {
-  if (!el) return;
-  el.addEventListener("pointerdown", startHold);
-  el.addEventListener("pointerup", endHold);
-  el.addEventListener("pointercancel", endHold);
-  el.addEventListener("pointerleave", endHold);
-  el.addEventListener("click", tapAfterComplete);
-}
-
-bindHold(heartWrap);
-bindHold(heartIcon);
-
-
-// ===== MINI PUZZLE 2x3 (STEP 2) =====
-function initPuzzle() {
-  if (!puzzleBoard) return;
-
-  puzzleBoard.innerHTML = "";
-  puzzleLockedCount = 0;
-  puzzleDone = false;
-
-  if (puzzleText) puzzleText.textContent = "Φτιάξε την φωτογραφία για να συνεχίσουμε… 💘";
-  if (puzzleBadge) puzzleBadge.textContent = "0/6";
-  if (btnNext2) btnNext2.classList.add("hidden");
-  if (puzzleMini) puzzleMini.classList.add("hidden");
-  if (puzzleBoard) puzzleBoard.classList.remove("done");
-
-  const cols = 2;
-  const rows = 3;
-
-  const rect = puzzleBoard.getBoundingClientRect();
-  const slotW = rect.width / cols;
-  const slotH = rect.height / rows;
-
-  const slots = [];
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      const idx = r * cols + c;
-
-      const slot = document.createElement("div");
-      slot.className = "puzzleSlot";
-      slot.dataset.index = String(idx);
-
-      slot.style.left = `${c * slotW + 8}px`;
-      slot.style.top = `${r * slotH + 8}px`;
-      slot.style.width = `${slotW - 16}px`;
-      slot.style.height = `${slotH - 16}px`;
-
-      puzzleBoard.appendChild(slot);
-
-      slots.push({
-        idx,
-        x: c * slotW + 8,
-        y: r * slotH + 8,
-        cx: c * slotW + slotW / 2,
-        cy: r * slotH + slotH / 2
-      });
-    }
-  }
-
-  const pieces = [];
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      const idx = r * cols + c;
-
-      const piece = document.createElement("div");
-      piece.className = "puzzlePiece";
-      piece.style.setProperty("--img", `url("${PUZZLE_PHOTO}")`);
-      piece.dataset.correct = String(idx);
-
-      piece.style.width = `${slotW - 16}px`;
-      piece.style.height = `${slotH - 16}px`;
-
-      piece.style.backgroundSize = `${cols * 100}% ${rows * 100}%`;
-      piece.style.backgroundPosition = `${(c / (cols - 1)) * 100}% ${(r / (rows - 1)) * 100}%`;
-
-      puzzleBoard.appendChild(piece);
-      pieces.push(piece);
-    }
-  }
-
-  pieces.sort(() => Math.random() - 0.5);
-  const pileX = rect.width * 0.10;
-  const pileY = rect.height * 0.58;
-
-  pieces.forEach((p, i) => {
-    const jitterX = (i % 3) * 10 + Math.random() * 10;
-    const jitterY = Math.floor(i / 3) * 12 + Math.random() * 10;
-    p.style.left = `${pileX + jitterX}px`;
-    p.style.top = `${pileY + jitterY}px`;
-  });
-
-  pieces.forEach((piece) => {
-    let startX = 0, startY = 0, origX = 0, origY = 0, dragging = false;
-
-    piece.addEventListener("pointerdown", (e) => {
-      if (piece.classList.contains("locked")) return;
-      dragging = true;
-      piece.classList.add("dragging");
-      piece.setPointerCapture(e.pointerId);
-
-      startX = e.clientX;
-      startY = e.clientY;
-      origX = parseFloat(piece.style.left);
-      origY = parseFloat(piece.style.top);
-
-      e.preventDefault();
-    });
-
-    piece.addEventListener("pointermove", (e) => {
-      if (!dragging) return;
-      const dx = e.clientX - startX;
-      const dy = e.clientY - startY;
-      piece.style.left = `${origX + dx}px`;
-      piece.style.top = `${origY + dy}px`;
-    });
-
-    piece.addEventListener("pointerup", () => {
-      if (!dragging) return;
-      dragging = false;
-      piece.classList.remove("dragging");
-
-      const correct = parseInt(piece.dataset.correct, 10);
-      const slot = slots[correct];
-
-      const px = parseFloat(piece.style.left) + (slotW - 16) / 2;
-      const py = parseFloat(piece.style.top) + (slotH - 16) / 2;
-
-      const dist = Math.hypot(px - slot.cx, py - slot.cy);
-      const threshold = Math.min(slotW, slotH) * 0.30;
-
-      if (dist < threshold) {
-        piece.style.left = `${slot.x}px`;
-        piece.style.top = `${slot.y}px`;
-        piece.classList.add("locked");
-
-        puzzleLockedCount++;
-        if (puzzleBadge) puzzleBadge.textContent = `${puzzleLockedCount}/6`;
-
-        vibrate(12);
-
-        if (puzzleLockedCount === 6 && !puzzleDone) {
-          puzzleDone = true;
-          puzzleBoard.classList.add("done");
-
-          if (puzzleText) puzzleText.textContent = "Με αγαπάς ακόμα; 💘";
-          if (puzzleMini) puzzleMini.classList.remove("hidden");
-          if (btnNext2) btnNext2.classList.remove("hidden");
-
-          vibrate(25);
-        }
-      }
-    });
-
-    piece.addEventListener("pointercancel", () => {
-      dragging = false;
-      piece.classList.remove("dragging");
-    });
-  });
-}
-
-if (btnPuzzleReset) {
-  btnPuzzleReset.addEventListener("click", () => {
-    vibrate(12);
-    initPuzzle();
-  });
-}
-
-
-// ===== HOLD WORDS (3s) =====
-let holdingWords = false;
-let wordsRaf = null;
-let wordsProgress = 0;
-let wordsLastT = 0;
-let wordsDone = false;
-
-const WORDS_HOLD_MS = 3000;
-
-function setWordsUI(p) {
-  const x = Math.max(0, Math.min(1, p));
-  if (holdWordsBarFill) holdWordsBarFill.style.width = `${(x * 100).toFixed(0)}%`;
-
-  if (!holdWordsBig) return;
-  if (x < 0.34) holdWordsBig.textContent = "Εγώ";
-  else if (x < 0.67) holdWordsBig.textContent = "Εσύ";
-  else holdWordsBig.textContent = "Εμείς";
-}
-
-function wordsTick(t) {
-  if (!holdingWords) return;
-
-  if (!wordsLastT) wordsLastT = t;
-  const dt = t - wordsLastT;
-  wordsLastT = t;
-
-  wordsProgress += dt / WORDS_HOLD_MS;
-  if (wordsProgress > 1) wordsProgress = 1;
-
-  setWordsUI(wordsProgress);
-
-  if (wordsProgress > 0.34 && wordsProgress < 0.34 + dt / WORDS_HOLD_MS) vibrate(10);
-  if (wordsProgress > 0.67 && wordsProgress < 0.67 + dt / WORDS_HOLD_MS) vibrate(12);
-
-  if (wordsProgress >= 1) {
-    holdingWords = false;
-    wordsLastT = 0;
-    wordsDone = true;
-
-    if (holdWordsWrap) {
-      holdWordsWrap.classList.add("done");
-      holdWordsWrap.classList.remove("is-holding");
-    }
-
-    if (holdWordsBig) holdWordsBig.textContent = "Εμείς";
-    if (holdWordsHint) holdWordsHint.textContent = "🥹 Αυτό θέλω.";
-
-    if (btnNextHoldWords) btnNextHoldWords.classList.remove("hidden");
-
-    vibrate(20);
-    return;
-  }
-
-  wordsRaf = requestAnimationFrame(wordsTick);
-}
-
-function startWordsHold() {
-  if (wordsDone) return;
-  holdingWords = true;
-  wordsLastT = 0;
-
-  if (holdWordsWrap) holdWordsWrap.classList.add("is-holding");
-  if (holdWordsHint) holdWordsHint.textContent = "Μη σταματήσεις…";
-
-  vibrate(8);
-  wordsRaf = requestAnimationFrame(wordsTick);
-}
-
-function endWordsHold() {
-  if (!holdingWords) return;
-  holdingWords = false;
-  wordsLastT = 0;
-  if (wordsRaf) cancelAnimationFrame(wordsRaf);
-
-  if (holdWordsWrap) holdWordsWrap.classList.remove("is-holding");
-
-  if (!wordsDone) {
-    wordsProgress = Math.max(0, wordsProgress - 0.18);
-    setWordsUI(wordsProgress);
-    if (holdWordsHint) holdWordsHint.textContent = "Κράτα για 3 δευτερόλεπτα 💘";
-  }
-}
-
-if (holdWordsWrap) {
-  holdWordsWrap.addEventListener("pointerdown", startWordsHold);
-  holdWordsWrap.addEventListener("pointerup", endWordsHold);
-  holdWordsWrap.addEventListener("pointercancel", endWordsHold);
-  holdWordsWrap.addEventListener("pointerleave", endWordsHold);
-}
-
-
-// ===== INIT =====
-applyReveal(0);
-setProgress();
-
-// (Αν θες να φαίνεται μόνο το intro μέχρι να διαλέξει mode, άφησέ το έτσι:)
-steps.forEach((s) => s.classList.remove("active"));
+  </script>
+</body>
+</html>
