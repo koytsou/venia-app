@@ -1,56 +1,76 @@
-const CACHE_NAME = 'valentine-app-v1';
+const CACHE_NAME = "valentine-app-v1";
+
 const urlsToCache = [
-  '/index.html',
-  '/style.css',
-  '/app.js',
-  '/manifest.json',
-  '/assets/photo1.jpg',
-  '/assets/voice.mp3',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png'
+  "/",
+  "/index.html",
+  "/style.css",
+  "/app.js",
+  "/manifest.json",
+  "/icons/icon-192.png",
+  "/icons/icon-512.png"
 ];
 
-self.addEventListener('install', event => {
+// ================= INSTALL =================
+self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
+    caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(urlsToCache).catch(() => {
-        console.log('Some assets failed to cache, continuing...');
+        console.log("⚠️ Some assets failed to cache");
       });
     })
   );
   self.skipWaiting();
 });
 
-self.addEventListener('activate', event => {
+// ================= ACTIVATE =================
+self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys.map((key) => {
+          if (key !== CACHE_NAME) {
+            return caches.delete(key);
           }
         })
-      );
-    })
+      )
+    )
   );
   self.clients.claim();
 });
 
-self.addEventListener('fetch', event => {
+// ================= FETCH =================
+self.addEventListener("fetch", (event) => {
+  // ❗ ΠΟΛΥ ΣΗΜΑΝΤΙΚΟ:
+  // ΜΗΝ ΚΑΝΕΙΣ CACHE POST / PUT / DELETE (Firebase τα χρησιμοποιεί)
+  if (event.request.method !== "GET") {
+    return;
+  }
+
   event.respondWith(
-    caches.match(event.request).then(response => {
-      return response || fetch(event.request).then(response => {
-        if (!response || response.status !== 200 || response.type === 'error') {
-          return response;
-        }
-        const responseToCache = response.clone();
-        caches.open(CACHE_NAME).then(cache => {
-          cache.put(event.request, responseToCache);
-        });
-        return response;
-      }).catch(() => {
-        return caches.match(event.request);
-      });
+    caches.match(event.request).then((cachedResponse) => {
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+
+      return fetch(event.request)
+        .then((networkResponse) => {
+          // Αν δεν είναι valid response, μην το κάνεις cache
+          if (
+            !networkResponse ||
+            networkResponse.status !== 200 ||
+            networkResponse.type !== "basic"
+          ) {
+            return networkResponse;
+          }
+
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+
+          return networkResponse;
+        })
+        .catch(() => cachedResponse);
     })
   );
 });
