@@ -1193,5 +1193,80 @@ body{
     transform: scale(1);
   }
 }
+/* ===== iPhone / mobile fixes for Reels ===== */
+
+/* Κάνε το overlay να υπολογίζει σωστά το ύψος σε κινητά */
+.momReels{
+  height: 100dvh;            /* modern browsers */
+  min-height: 100vh;         /* fallback */
+}
+
+/* Το scroll container */
+.momReelsList{
+  height: 100dvh;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  scroll-padding-top: env(safe-area-inset-top);
+  scroll-padding-bottom: calc(16px + env(safe-area-inset-bottom));
+}
+
+/* Κάθε post να πιάνει ΣΩΣΤΑ την οθόνη */
+.reelItem{
+  height: 100dvh;
+  min-height: 100vh;
+}
+
+/* Χ κουμπί: πάντα πάνω, πάντα ορατό */
+.momReelsClose{
+  position: fixed; /* όχι absolute */
+  z-index: 10002;
+  top: calc(12px + env(safe-area-inset-top));
+  left: 12px;
+
+  background: rgba(0,0,0,.55);   /* να φαίνεται πάνω σε φωτεινή φωτό */
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255,255,255,.22);
+  box-shadow: 0 10px 24px rgba(0,0,0,.35);
+}
+
+/* Hint να μη “τρώγεται” από safe area */
+.momReelsHint{
+  position: fixed;
+  z-index: 10001;
+  top: calc(16px + env(safe-area-inset-top));
+}
+
+/* Φωτογραφία: να χωράει, αλλά να αφήνει χώρο για caption */
+.reelMedia{
+  flex: 1;
+  min-height: 0; /* σημαντικό για να μην σπρώχνει το caption έξω */
+  padding: 10px;
+}
+
+.reelMedia img{
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display:block;
+}
+
+/* Caption: να ΜΗΝ κόβεται ποτέ */
+.reelCaption{
+  flex: 0 0 auto;
+  max-height: 34vh; /* ώστε η εικόνα να μη γίνεται τεράστια και σπρώχνει το κείμενο */
+  overflow: auto;   /* αν είναι μεγάλο το σημείωμα, να κάνει scroll μέσα */
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(22px + env(safe-area-inset-bottom));
+}
+
+/* Αν έχεις meta/date/delete σε σειρά, κράτα τα ορατά */
+.reelMeta{
+  position: sticky;
+  top: 0;
+  background: rgba(0,0,0,.20);
+  backdrop-filter: blur(6px);
+  padding: 6px 0;
+}
+
 
 
