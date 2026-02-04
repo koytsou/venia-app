@@ -43,7 +43,6 @@
     </div>
   </div>
 
-
   <!-- INTRO / MODE SELECT OVERLAY -->
   <div class="intro" id="intro">
     <div class="introCard">
@@ -64,7 +63,6 @@
     </div>
   </div>
 
-
   <div class="app">
     <header class="topbar">
       <div class="brand">
@@ -84,6 +82,7 @@
     </header>
 
     <main class="main">
+
       <!-- STEP 0: HEART -->
       <section class="step active" id="stepHeart">
         <div class="card hero oneCol heartStep">
@@ -128,7 +127,7 @@
 
           <div class="puzzleActions">
             <button class="btn ghost" id="btnPuzzleReset" type="button">Ξανά 🔄</button>
-            <button class="btn primary" id="btnNext2" type="button">Συνέχεια</button>
+            <button class="btn primary hidden" id="btnNext2" type="button">Συνέχεια</button>
           </div>
 
           <div class="puzzleMini hidden" id="puzzleMini">
@@ -175,7 +174,7 @@
           </div>
 
           <div class="actionCenter">
-            <button class="btn primary" id="btnNext4">Συνέχεια</button>
+            <button class="btn primary" id="btnNext4" type="button">Συνέχεια</button>
           </div>
         </div>
       </section>
@@ -186,7 +185,7 @@
           <div class="revealTitle">💌 Η φωνή μου</div>
           <div class="revealBody" id="audioBox"></div>
           <div class="actionCenter">
-            <button class="btn primary" id="btnNext5">Συνέχεια</button>
+            <button class="btn primary" id="btnNext5" type="button">Συνέχεια</button>
           </div>
         </div>
       </section>
@@ -224,7 +223,7 @@
             Πάτα “Δείξε μου” — έχω κρύψει μικρά όνειρα για εμάς εδώ μέσα. 💘
           </div>
           <div class="actionCenter">
-            <button class="btn primary" id="btnFutureNext">Δείξε μου</button>
+            <button class="btn primary" id="btnFutureNext" type="button">Δείξε μου</button>
           </div>
         </div>
       </section>
@@ -239,7 +238,9 @@
             <div class="usGrid">
               <button class="btn primary" id="btnUsCheckin" type="button">✅ Check-in</button>
               <button class="btn ghost" id="btnUsMemories" type="button">📸 Στιγμές</button>
-              <button class="btn ghost" id="btnUsNotes" type="button">📝 Σημειώσεις</button>
+
+              <!-- ✅ FIX: id ΠΡΕΠΕΙ να είναι btnUsNotes (όχι btnUsDiary) -->
+              <button class="btn ghost" id="btnUsNotes" type="button">📔 Ημερολόγιο</button>
             </div>
 
             <div class="usBox" id="usBox">
@@ -254,7 +255,7 @@
         </div>
       </section>
 
-      <!-- STEP MOMENTS: Instagram-style gallery + viewer -->
+      <!-- STEP MOMENTS -->
       <section class="step" id="stepMoments">
         <div class="card momentsPage">
           <div class="momTop">
@@ -265,23 +266,19 @@
 
           <div class="momGrid" id="momGrid"></div>
 
-          <!-- FULLSCREEN REELS VIEWER -->
           <div class="momReels hidden" id="momReels" aria-hidden="true">
             <button class="momReelsClose" id="momReelsClose" type="button">✕</button>
             <div class="momReelsHint">σύρε πάνω/κάτω 💘</div>
-
             <div class="momReelsList" id="momReelsList"></div>
           </div>
 
-
-          <!-- Add moment modal -->
           <div class="momAdd hidden" id="momAdd">
             <div class="momAddBackdrop" id="momAddBackdrop"></div>
             <div class="momAddCard">
               <div style="font-weight:900; margin-bottom:10px;">➕ Νέα Στιγμή</div>
 
               <input id="momentFile" type="file" accept="image/*" hidden>
-              <button class="btn ghost" id="pickPhoto">📷 Διάλεξε φωτογραφία</button>
+              <button class="btn ghost" id="pickPhoto" type="button">📷 Διάλεξε φωτογραφία</button>
 
               <input id="momentCaption" placeholder="Γράψε λεζάντα..." style="width:100%; padding:12px; border-radius:14px;">
               <div class="momActions">
@@ -295,6 +292,47 @@
         </div>
       </section>
 
+      <!-- ✅ STEP DIARY (Calendar + list + modal add/edit) -->
+      <section class="step" id="stepDiary">
+        <div class="card diaryPage">
+
+          <div class="calTop">
+            <div class="calTopRow">
+              <button class="btn ghost" id="btnDiaryBack" type="button">⬅ Πίσω</button>
+              <button class="btn primary" id="btnDiaryAddOpen" type="button">＋</button>
+            </div>
+
+            <div class="calHeader">
+              <button class="calNav" id="calPrev" type="button" aria-label="Προηγούμενος μήνας">‹</button>
+              <div class="calTitle" id="calTitle"></div>
+              <button class="calNav" id="calNext" type="button" aria-label="Επόμενος μήνας">›</button>
+            </div>
+          </div>
+
+          <!-- weekdays will be filled by JS -->
+          <div class="calWeekdays" id="calWeekdays" aria-hidden="true"></div>
+
+          <div class="calGrid" id="calGrid" aria-label="Ημερολόγιο"></div>
+
+          <div class="calDayPanel">
+            <div class="calDayTitle" id="calDayTitle">—</div>
+            <div class="calDayHint" id="calDayHint">Σημειώσεις για αυτή τη μέρα:</div>
+
+            <div class="diaryListFull" id="diaryListFull"></div>
+
+            <textarea id="diaryText" class="diaryTextarea" placeholder="Γράψε κάτι για αυτή τη μέρα..."></textarea>
+
+            <div class="diaryActions">
+              <button class="btn primary" id="diarySave" type="button">Αποθήκευση</button>
+              <button class="btn ghost hidden" id="diaryCancelEdit" type="button">Άκυρο</button>
+            </div>
+
+            <div class="diaryStatus" id="diaryStatus" style="opacity:.8; margin-top:10px; font-size:13px;"></div>
+          </div>
+
+        </div>
+      </section>
+
       <!-- STEP 7: Final -->
       <section class="step" id="step7">
         <div class="card">
@@ -303,13 +341,16 @@
             Υπόσχεσαι να είσαι και του χρόνου ο Βαλεντίνος μου;
           </p>
 
-          <button class="btn primary" id="btnYes">Ναι ❤️</button>
+          <div class="actionCenter">
+            <button class="btn primary" id="btnYes" type="button">Ναι ❤️</button>
+          </div>
 
           <div class="quote" style="margin-top:10px;">
             «Ό,τι κι αν έρθει… θέλω να είσαι εσύ.»
           </div>
         </div>
       </section>
+
     </main>
 
     <!-- MODAL -->
