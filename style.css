@@ -1006,131 +1006,129 @@ body{
   z-index: 10000;
   background: rgba(10, 6, 12, .96);
   backdrop-filter: blur(10px);
-  height: 100dvh;
 }
 .momReels.hidden{ display:none; }
 
-/* X κουμπί: πάντα ορατό */
 .momReelsClose{
-  position: fixed;
-  top: calc(12px + env(safe-area-inset-top));
+  position:absolute;
+  top: max(12px, env(safe-area-inset-top));
   left: 12px;
   width: 42px;
   height: 42px;
   border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.22);
-  background: rgba(0,0,0,.55);
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(0,0,0,.35);
   color: #fff;
   font-size: 20px;
   display:flex;
   align-items:center;
   justify-content:center;
-  z-index: 10002;
-  box-shadow: 0 10px 24px rgba(0,0,0,.35);
 }
 
 .momReelsHint{
-  position: fixed;
-  top: calc(16px + env(safe-area-inset-top));
+  position:absolute;
+  top: max(16px, env(safe-area-inset-top));
   left: 0; right: 0;
   text-align:center;
   font-size: 13px;
   opacity: .85;
   pointer-events:none;
-  z-index: 10001;
 }
 
 /* SCROLL CONTAINER */
 .momReelsList{
-  height: 100dvh;
-  overflow-y: scroll;
+  height: 100vh;
+  overflow-y: auto;
   scroll-snap-type: y mandatory;
-  scroll-snap-stop: always;
   -webkit-overflow-scrolling: touch;
 }
 
-/* ΚΑΘΕ POST = 1 ΟΘΟΝΗ */
+/* ΚΑΘΕ POST */
 .reelItem{
-  height: 100dvh;
-  min-height: 100vh;
+  height: 100vh;
+  scroll-snap-align: start;
   display: flex;
   flex-direction: column;
 }
 
 /* ΦΩΤΟ */
 .reelMedia{
-  flex: 1 1 auto;
-  min-height: 0;
-  padding: 10px;
-  max-height: calc(100dvh - 30vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  flex: 1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding: 8px;
 }
 
 .reelMedia img{
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  display: block;
+  max-height: 100%;
+  object-fit: contain; /* δεν κόβει */
+  display:block;
 }
 
-/* CAPTION */
+/* ΛΕΖΑΝΤΑ / META */
 .reelCaption{
-  flex: 0 0 auto;
-  background: linear-gradient(to top, rgba(0,0,0,.70), rgba(0,0,0,.25));
-  border-top: 1px solid rgba(255,255,255,.12);
   padding: 12px 14px calc(18px + env(safe-area-inset-bottom));
-
-  max-height: 34vh;   /* ✅ ΟΧΙ dvh */
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-
+  background: linear-gradient(to top, rgba(0,0,0,.65), rgba(0,0,0,.15));
+  border-top: 1px solid rgba(255,255,255,.12);
   font-size: 15px;
 }
 
-
-/* META γραμμή */
+/* ΗΜΕΡΟΜΗΝΙΑ + DELETE */
 .reelMeta{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap: 10px;
-  margin-bottom: 8px;
+  margin-bottom:6px;
 }
 
 .reelDate{
-  font-size: 13px;
-  opacity: .75;
+  font-size:13px;
+  opacity:.75;
 }
 
+/* ΛΕΖΑΝΤΑ */
 .reelText{
-  line-height: 1.35;
-  opacity: .95;
-  word-break: break-word;
+  line-height:1.35;
+  opacity:.95;
 }
 
-/* DELETE δεξιά κόκκινο */
+/* DELETE BUTTON */
 .reelDelete{
-  background: rgba(255,255,255,.06);
-  border: 1px solid rgba(255,255,255,.12);
+  background: transparent;
+  border: none;
   color: #ff4d4f;
   font-size: 14px;
-  font-weight: 700;
-  padding: 6px 10px;
-  border-radius: 12px;
+  font-weight: 600;
+  padding: 6px 8px;
+  border-radius: 10px;
 }
-.reelDelete:active{ background: rgba(255,77,79,.18); }
 
-/* ===== Add moment modal (ΚΕΝΤΡΑ) ===== */
+.reelDelete:active{
+  background: rgba(255,77,79,.18);
+}
+
+
+/* ===== Add moment modal (ΤΕΛΕΙΑ ΚΕΝΤΡΑΡΙΣΜΕΝΟ) ===== */
 .momAdd{
   position: fixed;
   inset: 0;
   z-index: 10001;
+
   display: flex;
   align-items: center;
   justify-content: center;
+
   padding: 16px;
 }
-.momAdd.hidden{ display:none; }
 
+.momAdd.hidden{
+  display: none;
+}
+
+/* backdrop */
 .momAddBackdrop{
   position: absolute;
   inset: 0;
@@ -1138,28 +1136,37 @@ body{
   backdrop-filter: blur(6px);
 }
 
+/* το modal */
 .momAddCard{
   position: relative;
   width: 100%;
   max-width: 380px;
+  gap: 12px;
+
   background: rgba(18,10,16,.96);
   border: 1px solid rgba(255,255,255,.12);
   border-radius: 22px;
   padding: 16px;
+
   box-shadow: 0 20px 50px rgba(0,0,0,.55);
   z-index: 1;
 }
-
-#pickPhoto{ margin-bottom: 10px; }  /* αυτό είναι το fix που ήθελες */
-#momentCaption{ margin-top: 10px; }
-
-.momActions{
-  display:flex;
-  gap:10px;
-  margin-top:14px;
+#pickPhoto{
+  margin-bottom: 4px;
 }
-.momActions .btn{ flex:1; }
+#momentCaption{
+  margin-top: 6px;
+}
+/* κουμπιά */
+.momActions{
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
 
+.momActions .btn{
+  flex: 1;
+}
 /* ===== Page transition ===== */
 .app.fadeOut {
   animation: appFadeOut .35s ease forwards;
@@ -1186,12 +1193,292 @@ body{
     transform: scale(1);
   }
 }
+/* ===== Diary Page additions ===== */
+.diaryPage { padding: 14px; }
 
+.diaryTextarea{
+  width: 100%;
+  min-height: 140px;
+  border-radius: 14px;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(0,0,0,.22);
+  color: #fff;
+  resize: none;
+  box-sizing: border-box;
+}
 
+/* ΛΙΣΤΑ ΣΗΜΕΙΩΣΕΩΝ (επιτρέπεται scroll μόνο στη λίστα, όχι στο κείμενο) */
+.diaryListFull{
+  margin-top: 12px;
+  max-height: 320px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 4px;
+}
 
+/* ΚΕΙΜΕΝΟ ΣΗΜΕΙΩΣΗΣ – ΠΟΤΕ SCROLL */
+.diaryEntry,
+.diaryEntryText{
+  max-height: none !important;
+  overflow: visible !important;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.45;
+  font-size: 15px;
+}
 
+/* Κουμπί αποθήκευσης κέντρο */
+.diaryActions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  width: 100%;
+}
 
+#diarySave {
+  min-width: 160px;
+  padding: 12px 24px;
+}
 
+/* ===== Calendar Diary UI ===== */
 
+/* wrapper με 2 σειρές */
+.calTop{
+  display:flex;
+  flex-direction: column;
+  gap:10px;
+  margin-bottom:12px;
+}
+
+/* ΠΑΝΩ: Πίσω + */
+.calTopRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+
+/* ΜΗΝΑΣ */
+.calHeader{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+}
+
+.calTitle{
+  font-weight:950;
+  letter-spacing:.2px;
+  text-align:center;
+  white-space: nowrap;
+  min-width: 160px;
+}
+
+/* navigation arrows */
+.calNav{
+  width:38px;
+  height:38px;
+  border-radius: 999px;
+  border:1px solid rgba(255,255,255,.18);
+  background: rgba(0,0,0,.25);
+  color:#fff;
+  font-size:20px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+}
+.calNav:active{ transform: scale(.98); }
+
+/* + button */
+#btnDiaryAddOpen{
+  min-width:44px;
+  min-height:44px;
+  padding:0;
+  font-size:22px;
+  border-radius:14px;
+}
+
+/* weekdays */
+.calWeekdays{
+  display:grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap:8px;
+  margin-bottom:8px;
+  opacity:.8;
+  font-size:12px;
+  text-align:center;
+}
+
+/* calendar grid */
+.calGrid{
+  display:grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap:8px;
+}
+
+.calCell{
+  border-radius: 14px;
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.18);
+  min-height: 46px;
+  padding: 8px 6px;
+  color:#fff;
+  position: relative;
+}
+
+.calCell.empty{
+  background: rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.06);
+}
+
+.calCell.day{
+  cursor:pointer;
+  transition: transform .08s ease;
+}
+.calCell.day:active{ transform: scale(.99); }
+
+.calNum{
+  font-weight:900;
+  font-size:14px;
+  text-align:left;
+  opacity:.95;
+}
+
+/* dot */
+.calDot{
+  position:absolute;
+  right:10px;
+  bottom:10px;
+  width:6px;
+  height:6px;
+  border-radius:999px;
+  background: rgba(255,255,255,.22);
+  opacity:.25;
+}
+
+/* today */
+.calCell.day.today{
+  border-color: rgba(255, 122, 166, .55);
+  box-shadow: 0 0 0 1px rgba(255,122,166,.20) inset;
+}
+
+/* selected */
+.calCell.day.selected{
+  border-color: rgba(255, 59, 107, .85);
+  background: rgba(255, 59, 107, .14);
+  box-shadow: 0 0 0 1px rgba(255,59,107,.20) inset;
+}
+.calCell.day.selected .calDot{
+  background: rgba(255,59,107,.85);
+  opacity: 1;
+}
+
+/* day has entry */
+.calCell.day.hasEntry .calDot{
+  background: rgba(255,59,107,.90);
+  opacity: 1;
+  box-shadow: 0 0 10px rgba(255,59,107,.35);
+}
+
+/* day panel */
+.calDayPanel{
+  margin-top:12px;
+  padding:12px;
+  border-radius: 18px;
+  background: rgba(0,0,0,.16);
+  border:1px solid rgba(255,255,255,.10);
+}
+
+.calDayTitle{
+  font-weight:950;
+  margin-bottom:4px;
+}
+
+.calDayHint{
+  opacity:.8;
+  font-size:13px;
+  margin-bottom:10px;
+}
+
+/* ===== Diary Entry Actions (Αλλαγή / Διαγραφή) ===== */
+.diaryEntryActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.diaryEntryActions button,
+.diaryEntryActions .btn {
+  padding: 4px 8px;
+  min-width: auto;
+  min-height: auto;
+  font-size: 12px;
+  border-radius: 8px;
+  line-height: 1;
+}
+
+.diaryEntryActions i,
+.diaryEntryActions span {
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* ===== Responsive tweaks ===== */
+@media (max-width: 420px){
+  .calTitle{ font-size:15px; min-width: 140px; }
+  .calNav{ width:34px; height:34px; font-size:18px; }
+  #btnDiaryAddOpen{ min-width:44px; min-height:44px; }
+}
+
+/* ===== FORCE diary entries to stack (fix cramped layout) ===== */
+
+/* Η κάθε καταχώρηση να είναι ΚΑΘΕΤΑ, όχι δίπλα-δίπλα */
+.diaryItem{
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 8px !important;
+}
+
+/* Η ημερομηνία να πιάνει όλο το πλάτος */
+.diaryMeta{
+  display: block !important;
+  margin-bottom: 2px;
+  opacity: .85;
+  font-size: 13px;
+}
+
+/* Το κείμενο να πιάνει full width και να σπάει σωστά */
+.diaryText,
+.diaryEntryText{
+  width: 100% !important;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow: visible !important;
+}
+
+/* Τα κουμπιά να πάνε κάτω και να μικρύνουν */
+.diaryEntryActions{
+  display: flex !important;
+  justify-content: flex-end !important;
+  gap: 8px !important;
+  flex-wrap: wrap; /* αν δεν χωράνε, πάνε από κάτω */
+}
+
+.diaryEntryActions .btn,
+.diaryEntryActions button{
+  padding: 6px 10px !important;
+  font-size: 12px !important;
+  min-width: auto !important;
+  border-radius: 10px !important;
+  line-height: 1.1 !important;
+}
 
 
