@@ -1,5 +1,7 @@
+// app.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+
 import {
   getFirestore,
   collection,
@@ -7,34 +9,21 @@ import {
   query,
   orderBy,
   onSnapshot,
-  serverTimestamp
+  serverTimestamp,
+  deleteDoc,
+  doc,
+  where,
+  updateDoc,
+  limit,
 } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 import {
   getStorage,
   ref,
   uploadBytes,
-  getDownloadURL
+  getDownloadURL,
+  deleteObject,
 } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
-
-import { deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-import { deleteObject } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
-
-async function deleteMoment(momentId) {
-  const m = momentsList.find(x => x.id === momentId);
-  if (!m) return;
-
-  if (!confirm("Να διαγραφεί η στιγμή;")) return;
-
-  // 1. σβήσε εικόνα
-  if (m.imagePath) {
-    await deleteObject(ref(storage, m.imagePath));
-  }
-
-  // 2. σβήσε document
-  await deleteDoc(doc(db, "couple", COUPLE_ID, "moments", momentId));
-}
-
 
 // ================== FIREBASE ==================
 const firebaseConfig = {
@@ -43,7 +32,7 @@ const firebaseConfig = {
   projectId: "venia-app",
   storageBucket: "venia-app.firebasestorage.app",
   messagingSenderId: "735058388909",
-  appId: "1:735058388909:web:c416068ae348f9af95a324"
+  appId: "1:735058388909:web:c416068ae348f9af95a324",
 };
 
 const fbApp = initializeApp(firebaseConfig);
@@ -51,10 +40,16 @@ const auth = getAuth(fbApp);
 const db = getFirestore(fbApp);
 const storage = getStorage(fbApp);
 
-signInAnonymously(auth).catch(console.error);
+// auth ready helper
+let authReadyResolve;
+const authReady = new Promise((res) => (authReadyResolve = res));
 
+signInAnonymously(auth).catch(console.error);
 onAuthStateChanged(auth, (user) => {
-  if (user) console.log("✅ Firebase OK. UID:", user.uid);
+  if (user) {
+    console.log("✅ Firebase OK. UID:", user.uid);
+    authReadyResolve?.();
+  }
 });
 
 // ================== SETTINGS ==================
@@ -67,66 +62,84 @@ const PUZZLE_PHOTO = "assets/puzzle.jpg";
 const VOICE_PATH = "assets/voice.mp3";
 
 const FUTURE_CARDS = [
-  { title: "🎓 Το πτυχίο μας", text: "Να το πάρουμε μαζί. Να λέμε «τα καταφέραμε» και να το γιορτάσουμε όπως μόνο εμείς ξέρουμε. 💘", img: "assets/ptyxio.jpg" },
-  { title: "📍 Ταξίδι", text: "Θέλω ένα ταξίδι μόνο για εμάς… να χαθούμε και να γελάμε όλη μέρα.", img: "assets/taxidi.jpg" },
-  { title: "🏠 Σπίτι", text: "Ένα σπίτι με ζεστό φως, μουσική, και μια γωνιά που θα είναι “η γωνιά μας”.", img: "assets/spiti.jpg" }
+  {
+    title: "🎓 Το πτυχίο μας",
+    text: "Να το πάρουμε μαζί. Να λέμε «τα καταφέραμε» και να το γιορτάσουμε όπως μόνο εμείς ξέρουμε. 💘",
+    img: "assets/ptyxio.jpg",
+  },
+  {
+    title: "📍 Ταξίδι",
+    text: "Θέλω ένα ταξίδι μόνο για εμάς… να χαθούμε και να γελάμε όλη μέρα.",
+    img: "assets/taxidi.jpg",
+  },
+  {
+    title: "🏠 Σπίτι",
+    text: "Ένα σπίτι με ζεστό φως, μουσική, και μια γωνιά που θα είναι “η γωνιά μας”.",
+    img: "assets/spiti.jpg",
+  },
 ];
 
 // ================== DOM ==================
-const lockScreen = document.getElementById("lockScreen");
-const lockInput  = document.getElementById("lockInput");
-const lockBtn    = document.getElementById("lockBtn");
-const lockError  = document.getElementById("lockError");
+const appEl = document.querySelector(".app");
 
+// lock
+const lockScreen = document.getElementById("lockScreen");
+const lockInput = document.getElementById("lockInput");
+const lockBtn = document.getElementById("lockBtn");
+const lockError = document.getElementById("lockError");
+
+// intro
 const intro = document.getElementById("intro");
 const btnUs = document.getElementById("btnUs");
 const btnValentine = document.getElementById("btnValentine");
 
+// steps / progress
 const steps = [...document.querySelectorAll(".step")];
 const progressFill = document.getElementById("progressFill");
 const progressText = document.getElementById("progressText");
 
+// audio
 const audioBox = document.getElementById("audioBox");
 
+// buttons nav
 const btnNext2 = document.getElementById("btnNext2");
 const btnNext4 = document.getElementById("btnNext4");
 const btnNext5 = document.getElementById("btnNext5");
+const btnNextHoldWords = document.getElementById("btnNextHoldWords");
 
 const futurePanel = document.getElementById("futurePanel");
 const btnFutureNext = document.getElementById("btnFutureNext");
 
 const btnYes = document.getElementById("btnYes");
 
+// modal
 const modal = document.getElementById("modal");
 const modalText = document.getElementById("modalText");
 const modalClose = document.getElementById("modalClose");
 
-// Heart step
+// heart step
 const heartWrap = document.getElementById("heartWrap");
 const heartIcon = document.getElementById("heartIcon");
 const heartText = document.getElementById("heartText");
 const revealImg = document.getElementById("revealImg");
 const holdHint = document.getElementById("holdHint");
-
-// Boom UI
 const ringFill = document.getElementById("ringFill");
 const sparks = document.getElementById("sparks");
 
-// Puzzle DOM
+// puzzle
 const puzzleBoard = document.getElementById("puzzleBoard");
 const puzzleText = document.getElementById("puzzleText");
 const puzzleBadge = document.getElementById("puzzleBadge");
 const btnPuzzleReset = document.getElementById("btnPuzzleReset");
 const puzzleMini = document.getElementById("puzzleMini");
 
-// HoldWords
+// hold words
 const holdWordsWrap = document.getElementById("holdWordsWrap");
 const holdWordsBig = document.getElementById("holdWordsBig");
 const holdWordsHint = document.getElementById("holdWordsHint");
 const holdWordsBarFill = document.getElementById("holdWordsBarFill");
-const btnNextHoldWords = document.getElementById("btnNextHoldWords");
 
-// Quiz DOM
+// quiz
 const quizBox = document.getElementById("quizBox");
 const btnQuizPrev = document.getElementById("btnQuizPrev");
 const btnQuizNext = document.getElementById("btnQuizNext");
@@ -134,7 +147,7 @@ const quizMiniEnd = document.getElementById("quizMiniEnd");
 const quizContinueWrap = document.getElementById("quizContinueWrap");
 const btnQuizContinue = document.getElementById("btnQuizContinue");
 
-// US mode DOM
+// us mode
 const btnUsCheckin = document.getElementById("btnUsCheckin");
 const btnUsMemories = document.getElementById("btnUsMemories");
 const btnUsNotes = document.getElementById("btnUsNotes");
@@ -142,33 +155,73 @@ const usBox = document.getElementById("usBox");
 const btnUsBack = document.getElementById("btnUsBack");
 const btnUsGoVal = document.getElementById("btnUsGoVal");
 
-// Moments step DOM
+// moments page
 const btnMomBack = document.getElementById("btnMomBack");
 const btnMomAddOpen = document.getElementById("btnMomAddOpen");
 const momGrid = document.getElementById("momGrid");
 
+// add moment modal
 const momAdd = document.getElementById("momAdd");
 const momAddBackdrop = document.getElementById("momAddBackdrop");
 const momentFile = document.getElementById("momentFile");
 const momentCaption = document.getElementById("momentCaption");
 const btnAddMoment = document.getElementById("btnAddMoment");
 const momentStatus = document.getElementById("momentStatus");
+const btnCancelMoment = document.getElementById("btnCancelMoment");
+const pickPhoto = document.getElementById("pickPhoto");
 
-// Fullscreen reels viewer
+// reels viewer
 const momReels = document.getElementById("momReels");
 const momReelsList = document.getElementById("momReelsList");
 const momReelsClose = document.getElementById("momReelsClose");
 
-// ================== QUIZ ==================
+// diary calendar page
+const btnDiaryBack = document.getElementById("btnDiaryBack");
+const btnDiaryAddOpen = document.getElementById("btnDiaryAddOpen");
+const calPrev = document.getElementById("calPrev");
+const calNext = document.getElementById("calNext");
+const calTitle = document.getElementById("calTitle");
+const calWeekdays = document.getElementById("calWeekdays");
+const calGrid = document.getElementById("calGrid");
+
+const calDayTitle = document.getElementById("calDayTitle");
+const calDayHint = document.getElementById("calDayHint");
+
+const diaryListFull = document.getElementById("diaryListFull");
+const diaryText = document.getElementById("diaryText");
+const diaryStatus = document.getElementById("diaryStatus");
+const diarySave = document.getElementById("diarySave");
+const diaryCancelEdit = document.getElementById("diaryCancelEdit");
+
+// ================== QUIZ DATA ==================
 const QUIZ = [
-  { q: "Ποιο ήταν το πρώτο μνμ μου;", options: ["Είσαι πολύ όμορφη", "Ήσουν χθες Αλχεμι;", "Ο κώλος σου είναι iconic"], correct: 1, winText: "🥹 ΝΑΙ. Το θυμάσαι τέλεια.", loseText: "😌 Όχι μωρό… ήταν το «Ήσουν χθες Αλχεμι;»." },
-  { q: "Πού πήγαμε πρώτη φορά μόνες μας;", options: ["Ναύπλιο", "Αθήνα", "Χαλκίδα"], correct: 0, winText: "💘 Σωστό. Ναύπλιο και αναμνήσεις.", loseText: "🙈 Όχι… Ναύπλιο ήταν." },
-  { q: "Πότε είπαμε το πρώτο «σ’ αγαπώ»;", options: ["Δεν το είπαμε", "Την πρώτη μέρα", "Στη βίλα"], correct: 2, winText: "❤️ Στη βίλα. Πάντα εκεί θα μένει.", loseText: "🥺 Όχι… στη βίλα." }
+  {
+    q: "Ποιο ήταν το πρώτο μνμ μου;",
+    options: ["Είσαι πολύ όμορφη", "Ήσουν χθες Αλχεμι;", "Ο κώλος σου είναι iconic"],
+    correct: 1,
+    winText: "🥹 ΝΑΙ. Το θυμάσαι τέλεια.",
+    loseText: "😌 Όχι μωρό… ήταν το «Ήσουν χθες Αλχεμι;».",
+  },
+  {
+    q: "Πού πήγαμε πρώτη φορά μόνες μας;",
+    options: ["Ναύπλιο", "Αθήνα", "Χαλκίδα"],
+    correct: 0,
+    winText: "💘 Σωστό. Ναύπλιο και αναμνήσεις.",
+    loseText: "🙈 Όχι… Ναύπλιο ήταν.",
+  },
+  {
+    q: "Πότε είπαμε το πρώτο «σ’ αγαπώ»;",
+    options: ["Δεν το είπαμε", "Την πρώτη μέρα", "Στη βίλα"],
+    correct: 2,
+    winText: "❤️ Στη βίλα. Πάντα εκεί θα μένει.",
+    loseText: "🥺 Όχι… στη βίλα.",
+  },
 ];
 
 // ================== STATE ==================
 let current = 0;
 let futureIndex = 0;
+let futureDone = false;
 let APP_MODE = null;
 
 let puzzleLockedCount = 0;
@@ -178,32 +231,30 @@ let quizIndex = 0;
 let quizAnswers = Array(QUIZ.length).fill(null);
 
 let momentsUnsub = null;
-let momentsList = []; // [{id, ...data}]
+let momentsList = []; // [{id, caption, imageUrl, imagePath, createdAt, createdBy}]
+
+// calendar diary state
+let diaryDayUnsub = null;
+let diaryDayList = []; // entries for selected day
+let monthMarksUnsub = null;
+let markedDays = new Set();
+
+let calView = new Date();
+let selectedDayKey = null;
+
+// edit mode
+let editingEntryId = null;
+let editingOriginalText = "";
 
 // ================== HELPERS ==================
-document.getElementById("pickPhoto")
-  ?.addEventListener("click", () => {
-    document.getElementById("momentFile").click();
-  });
-
-
 function vibrate(ms = 12) {
-  try { if (navigator.vibrate) navigator.vibrate(ms); } catch {}
+  try {
+    if (navigator.vibrate) navigator.vibrate(ms);
+  } catch {}
 }
 
 function esc(s) {
   return (s || "").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
-function openModal(text) {
-  if (!modal || !modalText) return;
-  modalText.textContent = text;
-  modal.classList.remove("hidden");
-}
-
-function closeModalFn() {
-  if (!modal) return;
-  modal.classList.add("hidden");
 }
 
 function setProgress() {
@@ -226,20 +277,73 @@ function goTo(stepId) {
   if (idx >= 0) showStep(idx);
 }
 
+function openModal(text) {
+  if (!modal || !modalText) return;
+  modalText.textContent = text;
+  modal.classList.remove("hidden");
+}
+
+function closeModalFn() {
+  if (!modal) return;
+  modal.classList.add("hidden");
+}
+
+function fmtDate(ts) {
+  if (!ts) return "";
+  const d = ts.toDate();
+  return d.toLocaleDateString("el-GR", { day: "2-digit", month: "long", year: "numeric" });
+}
+
+function fmtDateTime(ts) {
+  if (!ts) return "";
+  const d = ts.toDate();
+  return d.toLocaleString("el-GR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function pad2(n) {
+  return String(n).padStart(2, "0");
+}
+
+function toDayKey(date) {
+  const y = date.getFullYear();
+  const m = pad2(date.getMonth() + 1);
+  const d = pad2(date.getDate());
+  return `${y}-${m}-${d}`;
+}
+
+function dayKeyToLabel(dayKey) {
+  // dayKey: YYYY-MM-DD
+  const [y, m, d] = dayKey.split("-").map((x) => parseInt(x, 10));
+  const dt = new Date(y, m - 1, d);
+  return dt.toLocaleDateString("el-GR", { day: "2-digit", month: "long", year: "numeric" });
+}
+
+function monthLabel(date) {
+  return date.toLocaleDateString("el-GR", { month: "long", year: "numeric" });
+}
+
 // ================== LOCK SCREEN ==================
 function hideLock() {
   if (!lockScreen) return;
   lockScreen.classList.add("fadeOut");
-  setTimeout(() => { lockScreen.style.display = "none"; }, 320);
+  setTimeout(() => {
+    lockScreen.style.display = "none";
+  }, 320);
 }
 
 function tryUnlock() {
   if (!lockInput) return;
   const val = lockInput.value.replace(/\D/g, "").trim();
-
   if (val === LOCK_CODE) {
     lockError?.classList.add("hidden");
     hideLock();
+    openIntro();
   } else {
     lockError?.classList.remove("hidden");
     lockInput.value = "";
@@ -247,9 +351,16 @@ function tryUnlock() {
   }
 }
 
-setTimeout(() => { try { lockInput && lockInput.focus(); } catch {} }, 150);
+setTimeout(() => {
+  try {
+    lockInput && lockInput.focus();
+  } catch {}
+}, 150);
+
 lockBtn?.addEventListener("click", tryUnlock);
-lockInput?.addEventListener("keydown", (e) => { if (e.key === "Enter") tryUnlock(); });
+lockInput?.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") tryUnlock();
+});
 
 // ================== INTRO / MODE ==================
 function openIntro() {
@@ -268,8 +379,14 @@ function closeIntro() {
   else goTo("stepHeart");
 }
 
-btnValentine?.addEventListener("click", () => { APP_MODE = "valentine"; closeIntro(); });
-btnUs?.addEventListener("click", () => { APP_MODE = "us"; closeIntro(); });
+btnValentine?.addEventListener("click", () => {
+  APP_MODE = "valentine";
+  closeIntro();
+});
+btnUs?.addEventListener("click", () => {
+  APP_MODE = "us";
+  closeIntro();
+});
 
 // ================== AUDIO ==================
 if (audioBox) {
@@ -282,6 +399,9 @@ if (audioBox) {
   `;
 }
 
+// ================== PICK PHOTO BUTTON ==================
+pickPhoto?.addEventListener("click", () => momentFile?.click());
+
 // ================== MOMENTS (Grid + Reels + Upload) ==================
 function startMomentsListener() {
   if (momentsUnsub) momentsUnsub();
@@ -289,13 +409,17 @@ function startMomentsListener() {
   const momentsRef = collection(db, "couple", COUPLE_ID, "moments");
   const q = query(momentsRef, orderBy("createdAt", "desc"));
 
-  momentsUnsub = onSnapshot(q, (snap) => {
-    momentsList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    renderMomentsGrid();
-  }, (err) => {
-    console.error("moments listener error:", err);
-    if (momGrid) momGrid.innerHTML = `<div style="opacity:.8;">❌ Δεν έχω πρόσβαση (rules).</div>`;
-  });
+  momentsUnsub = onSnapshot(
+    q,
+    (snap) => {
+      momentsList = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      renderMomentsGrid();
+    },
+    (err) => {
+      console.error("moments listener error:", err);
+      if (momGrid) momGrid.innerHTML = `<div style="opacity:.8;">❌ Δεν έχω πρόσβαση (rules).</div>`;
+    }
+  );
 }
 
 function renderMomentsGrid() {
@@ -306,16 +430,18 @@ function renderMomentsGrid() {
     return;
   }
 
-  momGrid.innerHTML = momentsList.map((m, idx) => {
-    const img = m.imageUrl || "";
-    return `
-      <button class="momTile" type="button" data-idx="${idx}" aria-label="moment ${idx + 1}">
-        <img src="${img}" alt="moment" loading="lazy">
-      </button>
-    `;
-  }).join("");
+  momGrid.innerHTML = momentsList
+    .map((m, idx) => {
+      const img = m.imageUrl || "";
+      return `
+        <button class="momTile" type="button" data-idx="${idx}" aria-label="moment ${idx + 1}">
+          <img src="${img}" alt="moment" loading="lazy">
+        </button>
+      `;
+    })
+    .join("");
 
-  [...momGrid.querySelectorAll(".momTile")].forEach(btn => {
+  [...momGrid.querySelectorAll(".momTile")].forEach((btn) => {
     btn.addEventListener("click", () => {
       const idx = parseInt(btn.dataset.idx, 10);
       openReels(idx);
@@ -323,28 +449,51 @@ function renderMomentsGrid() {
   });
 }
 
+async function deleteMoment(momentId) {
+  const m = momentsList.find((x) => x.id === momentId);
+  if (!m) return;
+
+  if (!confirm("Να διαγραφεί η στιγμή;")) return;
+
+  try {
+    if (m.imagePath) {
+      await deleteObject(ref(storage, m.imagePath));
+    }
+    await deleteDoc(doc(db, "couple", COUPLE_ID, "moments", momentId));
+  } catch (e) {
+    console.error(e);
+    alert("❌ Δεν μπόρεσα να το διαγράψω.");
+  }
+}
+
+// ---- FULLSCREEN REELS VIEWER ----
 function openReels(startIndex = 0) {
   if (!momReels || !momReelsList) return;
   if (!momentsList.length) return;
 
-  momReelsList.innerHTML = momentsList.map(m => `
-    <div class="reelItem">
-      <div class="reelMedia">
-        <img src="${m.imageUrl}" alt="moment">
-      </div>
-
-      <div class="reelCaption">
-        <div class="reelMeta">
-          <div class="reelDate">${fmtDate(m.createdAt)}</div>
-          <button class="reelDelete" data-id="${m.id}" type="button">🗑️ Διαγραφή</button>
+  momReelsList.innerHTML = momentsList
+    .map(
+      (m) => `
+      <div class="reelItem">
+        <div class="reelMedia">
+          <img src="${m.imageUrl}" alt="moment">
         </div>
-        <div class="reelText">${esc(m.caption)}</div>
-      </div>
-    </div>
-  `).join("");
 
-  momReelsList.querySelectorAll(".reelDelete").forEach(btn => {
+        <div class="reelCaption">
+          <div class="reelMeta">
+            <div class="reelDate">${fmtDate(m.createdAt)}</div>
+            <button class="reelDelete" data-id="${m.id}" type="button">🗑️ Διαγραφή</button>
+          </div>
+          <div class="reelText">${esc(m.caption)}</div>
+        </div>
+      </div>
+    `
+    )
+    .join("");
+
+  momReelsList.querySelectorAll(".reelDelete").forEach((btn) => {
     btn.addEventListener("click", (e) => {
+      e.preventDefault();
       e.stopPropagation();
       deleteMoment(btn.dataset.id);
     });
@@ -359,13 +508,9 @@ function openReels(startIndex = 0) {
     const el = items[startIndex] || items[0];
     if (el) el.scrollIntoView({ block: "start" });
   });
+
+  vibrate(10);
 }
-
-
-document.getElementById("btnCancelMoment")
-  ?.addEventListener("click", closeAddMoment);
-
-
 
 function closeReels() {
   if (!momReels) return;
@@ -376,16 +521,7 @@ function closeReels() {
 
 momReelsClose?.addEventListener("click", closeReels);
 
-// κλείσιμο με Esc (desktop)
-window.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") {
-    if (momReels && !momReels.classList.contains("hidden")) closeReels();
-    if (momAdd && !momAdd.classList.contains("hidden")) closeAddMoment();
-    if (modal && !modal.classList.contains("hidden")) closeModalFn();
-  }
-});
-
-// Add moment modal
+// ================== ADD MOMENT MODAL ==================
 function openAddMoment() {
   momAdd?.classList.remove("hidden");
   if (momentStatus) momentStatus.textContent = "";
@@ -400,17 +536,27 @@ function closeAddMoment() {
 
 btnMomAddOpen?.addEventListener("click", openAddMoment);
 momAddBackdrop?.addEventListener("click", closeAddMoment);
+btnCancelMoment?.addEventListener("click", closeAddMoment);
 
 btnAddMoment?.addEventListener("click", async () => {
   try {
     const user = auth.currentUser;
-    if (!user) { if (momentStatus) momentStatus.textContent = "Περίμενε… συνδέομαι."; return; }
+    if (!user) {
+      if (momentStatus) momentStatus.textContent = "Περίμενε… συνδέομαι.";
+      return;
+    }
 
     const file = momentFile?.files?.[0];
     const caption = (momentCaption?.value || "").trim();
 
-    if (!file) { if (momentStatus) momentStatus.textContent = "Διάλεξε μια φωτογραφία."; return; }
-    if (!caption) { if (momentStatus) momentStatus.textContent = "Γράψε μια λεζάντα."; return; }
+    if (!file) {
+      if (momentStatus) momentStatus.textContent = "Διάλεξε μια φωτογραφία.";
+      return;
+    }
+    if (!caption) {
+      if (momentStatus) momentStatus.textContent = "Γράψε μια λεζάντα.";
+      return;
+    }
 
     btnAddMoment.disabled = true;
     if (momentStatus) momentStatus.textContent = "Ανέβασμα… ⏳";
@@ -427,7 +573,7 @@ btnAddMoment?.addEventListener("click", async () => {
       imageUrl: url,
       imagePath: path,
       createdAt: serverTimestamp(),
-      createdBy: user.uid
+      createdBy: user.uid,
     });
 
     if (momentStatus) momentStatus.textContent = "✅ Ανέβηκε! 💘";
@@ -439,6 +585,320 @@ btnAddMoment?.addEventListener("click", async () => {
   } finally {
     if (btnAddMoment) btnAddMoment.disabled = false;
   }
+});
+
+// κλείσιμο με Esc (desktop)
+window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    if (momReels && !momReels.classList.contains("hidden")) closeReels();
+    if (momAdd && !momAdd.classList.contains("hidden")) closeAddMoment();
+    if (modal && !modal.classList.contains("hidden")) closeModalFn();
+  }
+});
+
+// ================== CALENDAR DIARY ==================
+function renderWeekdays() {
+  if (!calWeekdays) return;
+  const days = ["Δε", "Τρ", "Τε", "Πε", "Πα", "Σα", "Κυ"];
+  calWeekdays.innerHTML = days.map((d) => `<div>${d}</div>`).join("");
+}
+
+function buildCalendarCells(viewDate) {
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+
+  // start of month
+  const first = new Date(year, month, 1);
+  // make Monday=0..Sunday=6
+  const jsDay = first.getDay(); // Sun=0
+  const mondayIndex = (jsDay + 6) % 7;
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const cells = [];
+  // 6 rows * 7 columns = 42 cells
+  for (let i = 0; i < 42; i++) {
+    const dayNum = i - mondayIndex + 1;
+    if (dayNum < 1 || dayNum > daysInMonth) {
+      cells.push({ empty: true });
+    } else {
+      const key = `${year}-${pad2(month + 1)}-${pad2(dayNum)}`;
+      cells.push({ empty: false, dayNum, key });
+    }
+  }
+  return cells;
+}
+
+function renderCalendar() {
+  if (!calGrid) return;
+
+  if (calTitle) calTitle.textContent = monthLabel(calView);
+
+  const todayKey = toDayKey(new Date());
+  const cells = buildCalendarCells(calView);
+
+  calGrid.innerHTML = cells
+    .map((c) => {
+      if (c.empty) return `<div class="calCell empty"></div>`;
+
+      const sel = c.key === selectedDayKey ? "selected" : "";
+      const today = c.key === todayKey ? "today" : "";
+      const hasEntry = markedDays.has(c.key) ? "hasEntry" : "";
+
+      return `
+        <button class="calCell day ${sel} ${today} ${hasEntry}" type="button" data-key="${c.key}">
+          <div class="calNum">${c.dayNum}</div>
+          <div class="calDot" aria-hidden="true"></div>
+        </button>
+      `;
+    })
+    .join("");
+
+  calGrid.querySelectorAll(".calCell.day").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const key = btn.dataset.key;
+      if (key) selectDay(key);
+    });
+  });
+}
+
+async function startDiaryMonthMarksListener() {
+  await authReady;
+
+  if (monthMarksUnsub) monthMarksUnsub();
+
+  const y = calView.getFullYear();
+  const m = calView.getMonth();
+
+  const firstKey = `${y}-${pad2(m + 1)}-01`;
+  const lastDate = new Date(y, m + 1, 0).getDate();
+  const lastKey = `${y}-${pad2(m + 1)}-${pad2(lastDate)}`;
+
+  const refDiary = collection(db, "couple", COUPLE_ID, "diaryEntries");
+
+  const qMonth = query(
+    refDiary,
+    where("dayKey", ">=", firstKey),
+    where("dayKey", "<=", lastKey),
+    orderBy("dayKey", "asc")
+  );
+
+  monthMarksUnsub = onSnapshot(
+    qMonth,
+    (snap) => {
+      const s = new Set();
+      snap.docs.forEach((d) => {
+        const data = d.data();
+        if (data?.dayKey) s.add(data.dayKey);
+      });
+      markedDays = s;
+      renderCalendar();
+    },
+    (err) => {
+      console.error("month marks listener error:", err);
+    }
+  );
+}
+
+function startDiaryDayListener() {
+  if (!selectedDayKey) return;
+  if (diaryDayUnsub) diaryDayUnsub();
+
+  const refDiary = collection(db, "couple", COUPLE_ID, "diaryEntries");
+  const qDay = query(refDiary, where("dayKey", "==", selectedDayKey), orderBy("createdAt", "desc"));
+
+  diaryDayUnsub = onSnapshot(
+    qDay,
+    (snap) => {
+      diaryDayList = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      renderDiaryDay();
+    },
+    (err) => {
+      console.error("diary day listener error:", err);
+      if (diaryListFull) diaryListFull.innerHTML = `<div style="opacity:.8;">❌ Δεν μπορώ να φορτώσω (index/rules).</div>`;
+    }
+  );
+}
+
+function renderDiaryDay() {
+  if (calDayTitle && selectedDayKey) calDayTitle.textContent = dayKeyToLabel(selectedDayKey);
+  if (calDayHint) calDayHint.textContent = "Σημειώσεις για αυτή τη μέρα:";
+
+  if (!diaryListFull) return;
+
+  if (!diaryDayList.length) {
+    diaryListFull.innerHTML = `<div style="opacity:.8;">Δεν έχουμε γράψει κάτι για αυτή τη μέρα… 💘</div>`;
+    return;
+  }
+
+  diaryListFull.innerHTML = diaryDayList
+    .map((x) => {
+      return `
+        <div class="diaryItem" style="margin-bottom:10px;">
+          <div class="diaryMeta" style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+            <div style="opacity:.85; font-size:13px;">${fmtDateTime(x.createdAt)}</div>
+
+            <div class="diaryEntryActions">
+              <button class="btn ghost diaryEditBtn" data-id="${x.id}" type="button">✏️ Αλλαγή</button>
+              <button class="btn ghost diaryDelBtn" data-id="${x.id}" type="button" style="color:#ff7a7a;">🗑️ Διαγραφή</button>
+            </div>
+          </div>
+
+          <div class="diaryText" style="white-space:pre-wrap; margin-top:8px;">${esc(x.text || "")}</div>
+        </div>
+      `;
+    })
+    .join("");
+
+  diaryListFull.querySelectorAll(".diaryDelBtn").forEach((btn) => {
+    btn.addEventListener("click", () => deleteDiaryEntry(btn.dataset.id));
+  });
+
+  diaryListFull.querySelectorAll(".diaryEditBtn").forEach((btn) => {
+    btn.addEventListener("click", () => startEditDiaryEntry(btn.dataset.id));
+  });
+}
+
+
+function selectDay(key) {
+  selectedDayKey = key;
+  renderCalendar();
+  startDiaryDayListener();
+
+  // reset edit state όταν αλλάζεις μέρα
+  stopEditMode();
+}
+
+function stopEditMode() {
+  editingEntryId = null;
+  editingOriginalText = "";
+  if (diaryCancelEdit) diaryCancelEdit.classList.add("hidden");
+  if (diarySave) diarySave.textContent = "Αποθήκευση";
+  if (diaryStatus) diaryStatus.textContent = "";
+  if (diaryText) diaryText.value = "";
+}
+
+function startEditDiaryEntry(entryId) {
+  const item = diaryDayList.find((x) => x.id === entryId);
+  if (!item) return;
+
+  editingEntryId = entryId;
+  editingOriginalText = item.text || "";
+
+  if (diaryText) diaryText.value = item.text || "";
+  if (diarySave) diarySave.textContent = "Αλλαγή";
+  if (diaryCancelEdit) diaryCancelEdit.classList.remove("hidden");
+  if (diaryStatus) diaryStatus.textContent = "✏️ Επεξεργασία…";
+  vibrate(10);
+
+  // scroll στο textarea αν είναι χαμηλά
+  try {
+    diaryText?.scrollIntoView({ behavior: "smooth", block: "center" });
+  } catch {}
+}
+
+async function deleteDiaryEntry(entryId) {
+  if (!entryId) return;
+
+  const item = diaryDayList.find((x) => x.id === entryId);
+  if (!item) return;
+
+  if (!confirm("Να διαγραφεί αυτή η σημείωση;")) return;
+
+  try {
+    await deleteDoc(doc(db, "couple", COUPLE_ID, "diaryEntries", entryId));
+    vibrate(16);
+
+    if (diaryStatus) diaryStatus.textContent = "🗑️ Διαγράφηκε.";
+    if (editingEntryId === entryId) stopEditMode();
+  } catch (e) {
+    console.error(e);
+    alert("❌ Δεν μπόρεσα να το διαγράψω.");
+  }
+}
+
+async function saveDiaryForSelectedDay() {
+  await authReady;
+  const user = auth.currentUser;
+  if (!user) {
+    if (diaryStatus) diaryStatus.textContent = "Περίμενε… συνδέομαι.";
+    return;
+  }
+
+  const text = (diaryText?.value || "").trim();
+  if (!text) {
+    if (diaryStatus) diaryStatus.textContent = "Γράψε κάτι πρώτα 💘";
+    return;
+  }
+  if (!selectedDayKey) {
+    if (diaryStatus) diaryStatus.textContent = "Διάλεξε μια μέρα πρώτα.";
+    return;
+  }
+
+  try {
+    if (diaryStatus) diaryStatus.textContent = "Αποθήκευση… ⏳";
+    if (diarySave) diarySave.disabled = true;
+
+    if (editingEntryId) {
+      // UPDATE
+      await updateDoc(doc(db, "couple", COUPLE_ID, "diaryEntries", editingEntryId), {
+        text,
+        editedAt: serverTimestamp(),
+      });
+
+      if (diaryStatus) diaryStatus.textContent = "✅ Έγινε αλλαγή.";
+      vibrate(14);
+      stopEditMode();
+      return;
+    }
+
+    // CREATE
+    await addDoc(collection(db, "couple", COUPLE_ID, "diaryEntries"), {
+      text,
+      dayKey: selectedDayKey, // ✅ για marks
+      createdAt: serverTimestamp(),
+      createdBy: user.uid,
+    });
+
+    if (diaryStatus) diaryStatus.textContent = "✅ Αποθηκεύτηκε.";
+    vibrate(14);
+    if (diaryText) diaryText.value = "";
+  } catch (err) {
+    console.error(err);
+    if (diaryStatus) diaryStatus.textContent = "❌ Κάτι πήγε στραβά.";
+  } finally {
+    if (diarySave) diarySave.disabled = false;
+  }
+}
+
+// ================== DIARY UI BUTTONS ==================
+diarySave?.addEventListener("click", saveDiaryForSelectedDay);
+
+diaryCancelEdit?.addEventListener("click", () => {
+  stopEditMode();
+  if (diaryStatus) diaryStatus.textContent = "Ακυρώθηκε.";
+});
+
+btnDiaryAddOpen?.addEventListener("click", () => {
+  // απλά κάνει focus στο textarea για γρήγορη προσθήκη
+  try {
+    diaryText?.focus();
+    diaryText?.scrollIntoView({ behavior: "smooth", block: "center" });
+  } catch {}
+});
+
+btnDiaryBack?.addEventListener("click", () => goTo("stepUs"));
+
+calPrev?.addEventListener("click", () => {
+  calView = new Date(calView.getFullYear(), calView.getMonth() - 1, 1);
+  renderCalendar();
+  startDiaryMonthMarksListener();
+});
+
+calNext?.addEventListener("click", () => {
+  calView = new Date(calView.getFullYear(), calView.getMonth() + 1, 1);
+  renderCalendar();
+  startDiaryMonthMarksListener();
 });
 
 // ================== STEP CHANGE HOOKS ==================
@@ -461,8 +921,17 @@ function afterStepChange() {
     renderQuiz();
   }
 
-  if (active.id === "stepMoments") {
-    startMomentsListener();
+  if (active.id === "stepMoments") startMomentsListener();
+
+  // ✅ όταν μπαίνεις στο ημερολόγιο
+  if (active.id === "stepDiary") {
+    renderWeekdays();
+    calView = new Date();
+    selectedDayKey = toDayKey(new Date());
+    renderCalendar();
+    startDiaryMonthMarksListener();
+    startDiaryDayListener();
+    stopEditMode();
   }
 }
 
@@ -476,9 +945,13 @@ function renderQuiz() {
   quizBox.innerHTML = `
     <div style="font-weight:900; font-size:18px; margin-bottom:12px;">${item.q}</div>
     <div class="quizOpts">
-      ${item.options.map((opt, i) => `
+      ${item.options
+        .map(
+          (opt, i) => `
         <button class="quizOpt ${chosen === i ? "selected" : ""}" data-i="${i}" type="button">${opt}</button>
-      `).join("")}
+      `
+        )
+        .join("")}
     </div>
     <div style="margin-top:12px; opacity:.9;">
       ${chosen !== null ? (chosen === item.correct ? item.winText : item.loseText) : ""}
@@ -497,13 +970,20 @@ function renderQuiz() {
 }
 
 btnQuizPrev?.addEventListener("click", () => {
-  if (quizIndex > 0) { quizIndex--; renderQuiz(); }
+  if (quizIndex > 0) {
+    quizIndex--;
+    renderQuiz();
+  }
 });
 
 btnQuizNext?.addEventListener("click", () => {
   if (quizAnswers[quizIndex] == null) return;
 
-  if (quizIndex < QUIZ.length - 1) { quizIndex++; renderQuiz(); return; }
+  if (quizIndex < QUIZ.length - 1) {
+    quizIndex++;
+    renderQuiz();
+    return;
+  }
 
   quizMiniEnd?.classList.remove("hidden");
   quizContinueWrap?.classList.remove("hidden");
@@ -521,9 +1001,11 @@ btnNext4?.addEventListener("click", () => goTo("step5"));
 btnNext5?.addEventListener("click", () => goTo("stepQuiz"));
 
 // ================== FUTURE ==================
-let futureDone = false;
 btnFutureNext?.addEventListener("click", () => {
-  if (futureDone) { goTo("step7"); return; }
+  if (futureDone) {
+    goTo("step7");
+    return;
+  }
 
   const card = FUTURE_CARDS[futureIndex % FUTURE_CARDS.length];
   if (futurePanel) {
@@ -566,76 +1048,53 @@ btnUsCheckin?.addEventListener("click", () => {
   document.getElementById("needCalm")?.addEventListener("click", () => save("Ηρεμία"));
 });
 
-btnUsMemories?.addEventListener("click", () => {
-  goTo("stepMoments");
-});
+btnUsMemories?.addEventListener("click", () => goTo("stepMoments"));
 
-btnUsNotes?.addEventListener("click", () => {
-  if (!usBox) return;
-  const prev = localStorage.getItem("us_note") || "";
-  usBox.innerHTML = `
-    <div style="font-weight:900; margin-bottom:6px;">📝 Σημειώσεις</div>
-    <textarea id="usNote" placeholder="Γράψε κάτι που θες να θυμόμαστε…"
-      style="width:100%; min-height:100px; border-radius:14px; padding:12px; border:1px solid rgba(255,255,255,.18); background: rgba(0,0,0,.22); color:white;">${prev}</textarea>
-    <div class="actionCenter" style="margin-top:10px;">
-      <button class="btn primary" id="saveUsNote" type="button">Αποθήκευση</button>
-    </div>
-    <div style="opacity:.75; font-size:13px; margin-top:6px;">Αποθηκεύεται μόνο σε αυτό το κινητό.</div>
-  `;
-
-  document.getElementById("saveUsNote")?.addEventListener("click", () => {
-    const ta = document.getElementById("usNote");
-    localStorage.setItem("us_note", ta ? ta.value : "");
-    usBox.innerHTML = "✅ Αποθηκεύτηκε. 💘";
-  });
-});
+// ✅ τώρα το “Σημειώσεις” πάει στο ημερολόγιο
+btnUsNotes?.addEventListener("click", () => goTo("stepDiary"));
 
 btnUsBack?.addEventListener("click", () => openIntro());
-btnUsGoVal?.addEventListener("click", () => { APP_MODE = "valentine"; goTo("stepHeart"); });
+btnUsGoVal?.addEventListener("click", () => {
+  APP_MODE = "valentine";
+  goTo("stepHeart");
+});
 
-// Moments step nav
+// moments step nav
 btnMomBack?.addEventListener("click", () => {
   closeReels();
   closeAddMoment();
   goTo("stepUs");
 });
-function fmtDate(ts){
-  if (!ts) return "";
-  const d = ts.toDate();
-  return d.toLocaleDateString("el-GR", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric"
-  });
-}
 
 // ================== FINAL ==================
 btnYes?.addEventListener("click", () => {
   openModal(`Το κρατάω αυτό 💘\nΧρόνια πολλά, ${HER_NAME}. Σε διαλέγω. Σήμερα και πάντα.`);
 });
-modalClose?.addEventListener("click", () => {
-  const app = document.querySelector(".app");
 
+modalClose?.addEventListener("click", () => {
   closeModalFn();
 
-  // fade out
-  app.classList.add("fadeOut");
+  if (!appEl) {
+    APP_MODE = "us";
+    goTo("stepUs");
+    return;
+  }
 
+  appEl.classList.add("fadeOut");
   setTimeout(() => {
     APP_MODE = "us";
     goTo("stepUs");
 
-    app.classList.remove("fadeOut");
-    app.classList.add("fadeIn");
+    appEl.classList.remove("fadeOut");
+    appEl.classList.add("fadeIn");
 
-    setTimeout(() => {
-      app.classList.remove("fadeIn");
-    }, 450);
+    setTimeout(() => appEl.classList.remove("fadeIn"), 450);
   }, 300);
 });
 
-
-modal?.addEventListener("click", (e) => { if (e.target === modal) closeModalFn(); });
+modal?.addEventListener("click", (e) => {
+  if (e.target === modal) closeModalFn();
+});
 
 // ================== SPARKS ==================
 function spawnSpark(type = "mix") {
@@ -729,7 +1188,9 @@ function endHold() {
   if (progress < 1 && heartText) heartText.innerHTML = "Κράτα την καρδιά πατημένη…";
 }
 
-function tapAfterComplete() { if (progress >= 1) goTo("step2"); }
+function tapAfterComplete() {
+  if (progress >= 1) goTo("step2");
+}
 
 function bindHold(el) {
   if (!el) return;
@@ -785,7 +1246,7 @@ function initPuzzle() {
         x: c * slotW + 8,
         y: r * slotH + 8,
         cx: c * slotW + slotW / 2,
-        cy: r * slotH + slotH / 2
+        cy: r * slotH + slotH / 2,
       });
     }
   }
@@ -823,7 +1284,11 @@ function initPuzzle() {
   });
 
   pieces.forEach((piece) => {
-    let startX = 0, startY = 0, origX = 0, origY = 0, dragging = false;
+    let startX = 0,
+      startY = 0,
+      origX = 0,
+      origY = 0,
+      dragging = false;
 
     piece.addEventListener("pointerdown", (e) => {
       if (piece.classList.contains("locked")) return;
@@ -888,7 +1353,10 @@ function initPuzzle() {
   });
 }
 
-btnPuzzleReset?.addEventListener("click", () => { vibrate(12); initPuzzle(); });
+btnPuzzleReset?.addEventListener("click", () => {
+  vibrate(12);
+  initPuzzle();
+});
 
 // ================== HOLD WORDS ==================
 let holdingWords = false;
@@ -968,5 +1436,6 @@ holdWordsWrap?.addEventListener("pointerleave", endWordsHold);
 // ================== INIT ==================
 if (revealImg) revealImg.src = PHOTO_PATH;
 applyReveal(0);
-setProgress();
-steps.forEach((s) => s.classList.remove("active"));
+
+// ξεκίνα πάντα στο πρώτο step (πίσω από lock/intro)
+showStep(0);
