@@ -1054,18 +1054,23 @@ body{
 }
 
 /* ΚΑΘΕ POST */
-.reelItem{
+.reelItem {
   height: 100dvh;
   scroll-snap-align: start;
   display: flex;
   flex-direction: column;
-  border-top-left-radius: 22px;
-  border-top-right-radius: 22px;
-  overflow: hidden; /* σημαντικό για να “κόβεται” η εικόνα */
+  /* Προσθήκη padding ή margin αν θες να "επιπλέει", 
+     αλλιώς σιγουρεύουμε το radius */
+  border-top-left-radius: 30px; /* Πιο μεγάλη τιμή για πιο ομαλό αποτέλεσμα */
+  border-top-right-radius: 30px;
+  overflow: hidden;
+  background: #000; /* Μαύρο φόντο πίσω από την εικόνα */
+  margin-top: 10px; /* Δημιουργεί ένα κενό για να φαίνεται η καμπύλη */
 }
 
 /* ΦΩΤΟ */
 .reelMedia{
+  position: relative;
   flex: 0 0 auto; /* όχι 1 */
   height: calc(100dvh - 190px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   display:flex;
@@ -1075,13 +1080,24 @@ body{
   min-height: 0;
 }
 
-.reelMedia img{
+.reelMedia img {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  display:block;
-  border-top-left-radius: 22px;
-  border-top-right-radius: 22px;
+  display: block;
+  border-top-left-radius: 25px;
+  border-top-right-radius: 25px;
+}
+.reelMedia::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 40px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.4), transparent);
+  z-index: 1;
+  pointer-events: none;
+  border-top-left-radius: 25px;
+  border-top-right-radius: 25px;
 }
 
 /* ΛΕΖΑΝΤΑ / META */
