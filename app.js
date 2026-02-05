@@ -520,6 +520,8 @@ function closeReels() {
 }
 
 momReelsClose?.addEventListener("click", closeReels);
+momReelsClose?.addEventListener("touchend", (e) => { e.preventDefault(); closeReels(); }, { passive:false });
+momReelsClose?.addEventListener("pointerup", closeReels);
 
 // ================== ADD MOMENT MODAL ==================
 function openAddMoment() {
