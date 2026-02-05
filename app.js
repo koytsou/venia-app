@@ -14,7 +14,10 @@ import {
   doc,
   where,
   updateDoc,
-  limit,
+  setDoc,
+  getDoc,
+  runTransaction,
+  increment,
 } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 import {
@@ -40,7 +43,7 @@ const auth = getAuth(fbApp);
 const db = getFirestore(fbApp);
 const storage = getStorage(fbApp);
 
-// auth ready helper
+// auth ready helper (anonymous, χωρίς UI)
 let authReadyResolve;
 const authReady = new Promise((res) => (authReadyResolve = res));
 
@@ -148,7 +151,7 @@ const quizContinueWrap = document.getElementById("quizContinueWrap");
 const btnQuizContinue = document.getElementById("btnQuizContinue");
 
 // us mode
-const btnUsCheckin = document.getElementById("btnUsCheckin");
+const btnUsCheckin = document.getElementById("btnUsCheckin"); // "Ερώτηση Ημέρας"
 const btnUsMemories = document.getElementById("btnUsMemories");
 const btnUsNotes = document.getElementById("btnUsNotes");
 const usBox = document.getElementById("usBox");
@@ -220,6 +223,8 @@ const QUIZ = [
 
 // ================== STATE ==================
 let current = 0;
+let previousStepId = null;
+
 let futureIndex = 0;
 let futureDone = false;
 let APP_MODE = null;
@@ -231,11 +236,11 @@ let quizIndex = 0;
 let quizAnswers = Array(QUIZ.length).fill(null);
 
 let momentsUnsub = null;
-let momentsList = []; // [{id, caption, imageUrl, imagePath, createdAt, createdBy}]
+let momentsList = [];
 
 // calendar diary state
 let diaryDayUnsub = null;
-let diaryDayList = []; // entries for selected day
+let diaryDayList = [];
 let monthMarksUnsub = null;
 let markedDays = new Set();
 
@@ -246,17 +251,19 @@ let selectedDayKey = null;
 let editingEntryId = null;
 let editingOriginalText = "";
 
+// daily QA listeners
+let dailyQAUnsub = null;
+let streakUnsub = null;
+
 // ================== HELPERS ==================
 function vibrate(ms = 12) {
   try {
     if (navigator.vibrate) navigator.vibrate(ms);
   } catch {}
 }
-
 function esc(s) {
   return (s || "").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
-
 function setProgress() {
   const total = 7;
   const value = Math.min(Math.max(current + 1, 1), total);
@@ -264,36 +271,34 @@ function setProgress() {
   if (progressFill) progressFill.style.width = `${pct}%`;
   if (progressText) progressText.textContent = `${value} / ${total}`;
 }
-
 function showStep(i) {
+  const prev = steps[current];
+  previousStepId = prev?.id || null;
+
   steps.forEach((s, idx) => s.classList.toggle("active", idx === i));
   current = i;
+
   setProgress();
   afterStepChange();
 }
-
 function goTo(stepId) {
   const idx = steps.findIndex((s) => s.id === stepId);
   if (idx >= 0) showStep(idx);
 }
-
 function openModal(text) {
   if (!modal || !modalText) return;
   modalText.textContent = text;
   modal.classList.remove("hidden");
 }
-
 function closeModalFn() {
   if (!modal) return;
   modal.classList.add("hidden");
 }
-
 function fmtDate(ts) {
   if (!ts) return "";
   const d = ts.toDate();
   return d.toLocaleDateString("el-GR", { day: "2-digit", month: "long", year: "numeric" });
 }
-
 function fmtDateTime(ts) {
   if (!ts) return "";
   const d = ts.toDate();
@@ -305,27 +310,366 @@ function fmtDateTime(ts) {
     minute: "2-digit",
   });
 }
-
 function pad2(n) {
   return String(n).padStart(2, "0");
 }
-
 function toDayKey(date) {
   const y = date.getFullYear();
   const m = pad2(date.getMonth() + 1);
   const d = pad2(date.getDate());
   return `${y}-${m}-${d}`;
 }
-
 function dayKeyToLabel(dayKey) {
-  // dayKey: YYYY-MM-DD
   const [y, m, d] = dayKey.split("-").map((x) => parseInt(x, 10));
   const dt = new Date(y, m - 1, d);
   return dt.toLocaleDateString("el-GR", { day: "2-digit", month: "long", year: "numeric" });
 }
-
 function monthLabel(date) {
   return date.toLocaleDateString("el-GR", { month: "long", year: "numeric" });
+}
+function autosize(el) {
+  if (!el) return;
+  el.style.height = "auto";
+  el.style.height = el.scrollHeight + "px";
+}
+
+// ================== DAILY QUESTION (Check-in replacement) ==================
+// ✅ αλλαγές:
+// 1) Μόλις πατήσεις "Αποθήκευση" -> κλειδώνει για τη μέρα (δεν αλλάζει μέχρι αύριο)
+// 2) Δεν δείχνει ιστορικό/τελευταία αλλαγή
+// 3) Streak: μετράει μόνο όταν απαντήσετε ΚΑΙ ΟΙ ΔΥΟ την ίδια μέρα
+//    Αν χαθεί έστω μία μέρα (δεν απαντήσει ένας από τους 2) -> reset (πάει 1 στο επόμενο complete)
+
+const DAILY_QUESTIONS = [
+  "Πες ένα πράγμα που εκτίμησες σήμερα σε μένα 💘",
+  "Τι σου έλειψε πιο πολύ από εμάς σήμερα;",
+  "Αν η μέρα μας ήταν τραγούδι, ποιο θα ήταν;",
+  "Ποια στιγμή της μέρας σκέφτηκες εμένα;",
+  "Πες ένα μικρό πράγμα που θες να κάνουμε μαζί αύριο;",
+  "Τι θα ήθελες να ακούσεις από μένα σήμερα;",
+  "Ποια ήταν η πιο γλυκιά σκέψη σου σήμερα;",
+  "Πες μου ένα «ευχαριστώ» για σήμερα 💗",
+  "Τι σε έκανε να χαμογελάσεις σήμερα;",
+  "Ποιο είναι ένα πράγμα που μπορώ να κάνω αύριο για να σε κάνω πιο χαρούμενη/ο;",
+];
+
+// Σταθερό dayKey με ώρα Ελλάδας
+function getDayKeyAthens() {
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Athens",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+
+  const y = parts.find((p) => p.type === "year").value;
+  const m = parts.find((p) => p.type === "month").value;
+  const d = parts.find((p) => p.type === "day").value;
+  return `${y}-${m}-${d}`;
+}
+
+function getYesterdayKeyAthens() {
+  // παίρνουμε "σήμερα" σε Athens και αφαιρούμε 1 μέρα
+  const now = new Date();
+  // βρίσκουμε y-m-d σε Athens
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Athens",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+
+  const y = parseInt(parts.find((p) => p.type === "year").value, 10);
+  const m = parseInt(parts.find((p) => p.type === "month").value, 10);
+  const d = parseInt(parts.find((p) => p.type === "day").value, 10);
+
+  // φτιάχνουμε local Date (δεν μας νοιάζει timezone εδώ, μόνο το dayKey)
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() - 1);
+  return `${dt.getFullYear()}-${pad2(dt.getMonth() + 1)}-${pad2(dt.getDate())}`;
+}
+
+function pickQuestionForDay(dayKey) {
+  let hash = 0;
+  for (let i = 0; i < dayKey.length; i++) hash = (hash * 31 + dayKey.charCodeAt(i)) >>> 0;
+  return DAILY_QUESTIONS[hash % DAILY_QUESTIONS.length];
+}
+
+function startStreakListener() {
+  if (streakUnsub) streakUnsub();
+
+  const streakRef = doc(db, "couple", COUPLE_ID, "streaks", "dailyQA");
+  streakUnsub = onSnapshot(
+    streakRef,
+    (snap) => {
+      const s = snap.exists() ? snap.data() : null;
+      const el = document.getElementById("qa_streak_value");
+      if (el) el.textContent = String(s?.currentStreak || 0);
+    },
+    (err) => {
+      console.error("streak listener error:", err);
+      const el = document.getElementById("qa_streak_value");
+      if (el) el.textContent = "0";
+    }
+  );
+}
+
+function applyLockUI(whoKey, locked) {
+  const inputId = whoKey === "giorgos" ? "qa_giorgos" : "qa_venia";
+  const btnId = whoKey === "giorgos" ? "qa_save_giorgos" : "qa_save_venia";
+  const badgeId = whoKey === "giorgos" ? "qa_giorgos_lock" : "qa_venia_lock";
+
+  const ta = document.getElementById(inputId);
+  const btn = document.getElementById(btnId);
+  const badge = document.getElementById(badgeId);
+
+  if (ta) ta.disabled = !!locked;
+  if (btn) btn.disabled = !!locked;
+
+  if (badge) {
+    badge.textContent = locked ? "🔒 Κλειδωμένο" : "";
+    badge.style.opacity = locked ? "0.85" : "0";
+  }
+}
+
+function startDailyQAListener(dayKey) {
+  if (dailyQAUnsub) dailyQAUnsub();
+
+  const refDoc = doc(db, "couple", COUPLE_ID, "dailyQA", dayKey);
+
+  dailyQAUnsub = onSnapshot(
+    refDoc,
+    (snap) => {
+      const data = snap.exists() ? snap.data() : null;
+
+      const gEl = document.getElementById("qa_giorgos");
+      const vEl = document.getElementById("qa_venia");
+
+      const gText = data?.answers?.giorgos?.text || "";
+      const vText = data?.answers?.venia?.text || "";
+      const gLocked = !!data?.answers?.giorgos?.locked;
+      const vLocked = !!data?.answers?.venia?.locked;
+
+      // ενημέρωση κειμένου (χωρίς να πετάει ενώ γράφεις)
+      if (gEl && document.activeElement !== gEl && gEl.value !== gText) {
+        gEl.value = gText;
+        autosize(gEl);
+      }
+      if (vEl && document.activeElement !== vEl && vEl.value !== vText) {
+        vEl.value = vText;
+        autosize(vEl);
+      }
+
+      // κλείδωμα UI
+      applyLockUI("giorgos", gLocked);
+      applyLockUI("venia", vLocked);
+
+      // status μικρό
+      const status = document.getElementById("qa_status");
+      if (status) {
+        if (gLocked && vLocked) status.textContent = "✅ Και οι δύο απαντήσατε σήμερα. (streak ενημερώθηκε)";
+        else if (gLocked || vLocked) status.textContent = "🔒 Μία απάντηση κλείδωσε. Περιμένει ο άλλος…";
+        else status.textContent = "";
+      }
+    },
+    (err) => {
+      console.error("dailyQA listener error:", err);
+      const status = document.getElementById("qa_status");
+      if (status) status.textContent = "❌ Δεν μπορώ να φορτώσω (rules).";
+    }
+  );
+}
+
+async function saveDailyAnswer(whoKey) {
+  await authReady;
+
+  const dayKey = getDayKeyAthens();
+  const question = pickQuestionForDay(dayKey);
+
+  const inputId = whoKey === "giorgos" ? "qa_giorgos" : "qa_venia";
+  const btnId = whoKey === "giorgos" ? "qa_save_giorgos" : "qa_save_venia";
+  const el = document.getElementById(inputId);
+  const btn = document.getElementById(btnId);
+  const status = document.getElementById("qa_status");
+
+  const text = (el?.value || "").trim();
+  if (!text) {
+    if (status) status.textContent = "Γράψε κάτι πρώτα 💘";
+    return;
+  }
+
+  const qaRef = doc(db, "couple", COUPLE_ID, "dailyQA", dayKey);
+  const streakRef = doc(db, "couple", COUPLE_ID, "streaks", "dailyQA");
+
+  try {
+    if (status) status.textContent = "Αποθήκευση… ⏳";
+    if (btn) btn.disabled = true;
+
+    await runTransaction(db, async (tx) => {
+      const qaSnap = await tx.get(qaRef);
+      const qaData = qaSnap.exists() ? qaSnap.data() : {};
+
+      const alreadyLocked = !!qaData?.answers?.[whoKey]?.locked;
+      if (alreadyLocked) {
+        // ήδη κλειδωμένο -> τίποτα
+        return;
+      }
+
+      // γράφουμε απάντηση + κλειδώνουμε
+      tx.set(
+        qaRef,
+        {
+          dayKey,
+          question,
+          updatedAt: serverTimestamp(),
+          answers: {
+            [whoKey]: {
+              text,
+              locked: true,
+              lockedAt: serverTimestamp(),
+            },
+          },
+        },
+        { merge: true }
+      );
+
+      // μετά το write, ελέγχουμε αν "και οι δύο" είναι locked
+      const gLocked = whoKey === "giorgos" ? true : !!qaData?.answers?.giorgos?.locked;
+      const vLocked = whoKey === "venia" ? true : !!qaData?.answers?.venia?.locked;
+
+      const wasComplete = !!qaData?.complete;
+      const nowComplete = gLocked && vLocked;
+
+      // αν μόλις έγινε complete (και δεν ήταν ήδη)
+      if (nowComplete && !wasComplete) {
+        tx.set(
+          qaRef,
+          {
+            complete: true,
+            completeAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+
+        const sSnap = await tx.get(streakRef);
+        const sData = sSnap.exists() ? sSnap.data() : {};
+        const last = sData?.lastCompleteDayKey || null;
+
+        const yesterdayKey = getYesterdayKeyAthens();
+
+        // Αν χθες ήταν το τελευταίο complete -> +1
+        // Αλλιώς -> reset σε 1
+        const nextStreak = last === yesterdayKey ? (sData?.currentStreak || 0) + 1 : 1;
+
+        tx.set(
+          streakRef,
+          {
+            currentStreak: nextStreak,
+            lastCompleteDayKey: dayKey,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+      }
+    });
+
+    // UI κλείδωμα άμεσα (και θα έρθει και από listener)
+    applyLockUI(whoKey, true);
+
+    vibrate(14);
+    // status θα το βάλει ο listener πιο σωστά, αλλά βάλε ένα γρήγορο feedback
+    if (status) status.textContent = "✅ Αποθηκεύτηκε & κλειδώθηκε για σήμερα.";
+  } catch (e) {
+    console.error(e);
+    if (status) status.textContent = "❌ Κάτι πήγε στραβά.";
+    if (btn) btn.disabled = false;
+    return;
+  } finally {
+    // αν δεν κλείδωσε (π.χ. ήδη locked), ο listener θα το κάνει disabled
+    if (btn) btn.disabled = false;
+  }
+}
+
+function openDailyQuestionUI() {
+  if (!usBox) return;
+
+  const dayKey = getDayKeyAthens();
+  const q = pickQuestionForDay(dayKey);
+
+  if (btnUsCheckin) btnUsCheckin.textContent = "🎯 Ερώτηση Ημέρας";
+
+  usBox.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:8px;">
+      <div style="font-weight:900;">🎯 Ερώτηση Ημέρας</div>
+      <div class="panel" style="padding:8px 10px; border-radius:14px; display:flex; gap:8px; align-items:center;">
+        <div style="opacity:.8;">🔥 Streak</div>
+        <div id="qa_streak_value" style="font-weight:950;">0</div>
+      </div>
+    </div>
+
+    <div style="opacity:.9; margin-bottom:12px; line-height:1.35;">
+      <b>${esc(q)}</b><br>
+      <span style="opacity:.75; font-size:13px;">(${dayKey})</span>
+    </div>
+
+    <div style="display:grid; gap:12px;">
+      <div class="panel" style="padding:12px; border-radius:14px;">
+        <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
+          <div style="font-weight:900;">Γιώργος</div>
+          <div id="qa_giorgos_lock" style="font-size:12px; opacity:0;"></div>
+        </div>
+
+        <textarea id="qa_giorgos"
+          class="diaryTextarea"
+          placeholder="Γράψε εδώ…"
+          style="min-height:90px; margin-top:10px;"></textarea>
+
+        <div style="display:flex; justify-content:flex-end; margin-top:8px;">
+          <button class="btn primary" id="qa_save_giorgos" type="button" style="padding:8px 12px; border-radius:12px;">
+            Αποθήκευση
+          </button>
+        </div>
+      </div>
+
+      <div class="panel" style="padding:12px; border-radius:14px;">
+        <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
+          <div style="font-weight:900;">Βένια</div>
+          <div id="qa_venia_lock" style="font-size:12px; opacity:0;"></div>
+        </div>
+
+        <textarea id="qa_venia"
+          class="diaryTextarea"
+          placeholder="Γράψε εδώ…"
+          style="min-height:90px; margin-top:10px;"></textarea>
+
+        <div style="display:flex; justify-content:flex-end; margin-top:8px;">
+          <button class="btn primary" id="qa_save_venia" type="button" style="padding:8px 12px; border-radius:12px;">
+            Αποθήκευση
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="qa_status" style="opacity:.85; margin-top:10px; font-size:13px;"></div>
+  `;
+
+  const gEl = document.getElementById("qa_giorgos");
+  const vEl = document.getElementById("qa_venia");
+
+  gEl?.addEventListener("input", () => autosize(gEl));
+  vEl?.addEventListener("input", () => autosize(vEl));
+
+  document.getElementById("qa_save_giorgos")?.addEventListener("click", () => saveDailyAnswer("giorgos"));
+  document.getElementById("qa_save_venia")?.addEventListener("click", () => saveDailyAnswer("venia"));
+
+  // listeners
+  startDailyQAListener(dayKey);
+  startStreakListener();
+
+  // πρώτο autosize
+  autosize(gEl);
+  autosize(vEl);
 }
 
 // ================== LOCK SCREEN ==================
@@ -336,7 +680,6 @@ function hideLock() {
     lockScreen.style.display = "none";
   }, 320);
 }
-
 function tryUnlock() {
   if (!lockInput) return;
   const val = lockInput.value.replace(/\D/g, "").trim();
@@ -350,13 +693,11 @@ function tryUnlock() {
     vibrate(18);
   }
 }
-
 setTimeout(() => {
   try {
     lockInput && lockInput.focus();
   } catch {}
 }, 150);
-
 lockBtn?.addEventListener("click", tryUnlock);
 lockInput?.addEventListener("keydown", (e) => {
   if (e.key === "Enter") tryUnlock();
@@ -368,7 +709,6 @@ function openIntro() {
   intro.style.display = "";
   intro.classList.remove("hide");
 }
-
 function closeIntro() {
   if (!intro) return;
   intro.classList.add("hide");
@@ -378,7 +718,6 @@ function closeIntro() {
   else if (APP_MODE === "us") goTo("stepUs");
   else goTo("stepHeart");
 }
-
 btnValentine?.addEventListener("click", () => {
   APP_MODE = "valentine";
   closeIntro();
@@ -456,9 +795,7 @@ async function deleteMoment(momentId) {
   if (!confirm("Να διαγραφεί η στιγμή;")) return;
 
   try {
-    if (m.imagePath) {
-      await deleteObject(ref(storage, m.imagePath));
-    }
+    if (m.imagePath) await deleteObject(ref(storage, m.imagePath));
     await deleteDoc(doc(db, "couple", COUPLE_ID, "moments", momentId));
   } catch (e) {
     console.error(e);
@@ -466,7 +803,6 @@ async function deleteMoment(momentId) {
   }
 }
 
-// ---- FULLSCREEN REELS VIEWER ----
 function openReels(startIndex = 0) {
   if (!momReels || !momReelsList) return;
   if (!momentsList.length) return;
@@ -520,7 +856,14 @@ function closeReels() {
 }
 
 momReelsClose?.addEventListener("click", closeReels);
-momReelsClose?.addEventListener("touchend", (e) => { e.preventDefault(); closeReels(); }, { passive:false });
+momReelsClose?.addEventListener(
+  "touchend",
+  (e) => {
+    e.preventDefault();
+    closeReels();
+  },
+  { passive: false }
+);
 momReelsClose?.addEventListener("pointerup", closeReels);
 
 // ================== ADD MOMENT MODAL ==================
@@ -528,7 +871,6 @@ function openAddMoment() {
   momAdd?.classList.remove("hidden");
   if (momentStatus) momentStatus.textContent = "";
 }
-
 function closeAddMoment() {
   momAdd?.classList.add("hidden");
   if (momentFile) momentFile.value = "";
@@ -609,16 +951,13 @@ function buildCalendarCells(viewDate) {
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
 
-  // start of month
   const first = new Date(year, month, 1);
-  // make Monday=0..Sunday=6
-  const jsDay = first.getDay(); // Sun=0
+  const jsDay = first.getDay();
   const mondayIndex = (jsDay + 6) % 7;
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
   const cells = [];
-  // 6 rows * 7 columns = 42 cells
   for (let i = 0; i < 42; i++) {
     const dayNum = i - mondayIndex + 1;
     if (dayNum < 1 || dayNum > daysInMonth) {
@@ -696,9 +1035,7 @@ async function startDiaryMonthMarksListener() {
       markedDays = s;
       renderCalendar();
     },
-    (err) => {
-      console.error("month marks listener error:", err);
-    }
+    (err) => console.error("month marks listener error:", err)
   );
 }
 
@@ -761,13 +1098,10 @@ function renderDiaryDay() {
   });
 }
 
-
 function selectDay(key) {
   selectedDayKey = key;
   renderCalendar();
   startDiaryDayListener();
-
-  // reset edit state όταν αλλάζεις μέρα
   stopEditMode();
 }
 
@@ -793,7 +1127,6 @@ function startEditDiaryEntry(entryId) {
   if (diaryStatus) diaryStatus.textContent = "✏️ Επεξεργασία…";
   vibrate(10);
 
-  // scroll στο textarea αν είναι χαμηλά
   try {
     diaryText?.scrollIntoView({ behavior: "smooth", block: "center" });
   } catch {}
@@ -821,11 +1154,6 @@ async function deleteDiaryEntry(entryId) {
 
 async function saveDiaryForSelectedDay() {
   await authReady;
-  const user = auth.currentUser;
-  if (!user) {
-    if (diaryStatus) diaryStatus.textContent = "Περίμενε… συνδέομαι.";
-    return;
-  }
 
   const text = (diaryText?.value || "").trim();
   if (!text) {
@@ -842,7 +1170,6 @@ async function saveDiaryForSelectedDay() {
     if (diarySave) diarySave.disabled = true;
 
     if (editingEntryId) {
-      // UPDATE
       await updateDoc(doc(db, "couple", COUPLE_ID, "diaryEntries", editingEntryId), {
         text,
         editedAt: serverTimestamp(),
@@ -854,12 +1181,11 @@ async function saveDiaryForSelectedDay() {
       return;
     }
 
-    // CREATE
     await addDoc(collection(db, "couple", COUPLE_ID, "diaryEntries"), {
       text,
-      dayKey: selectedDayKey, // ✅ για marks
+      dayKey: selectedDayKey,
       createdAt: serverTimestamp(),
-      createdBy: user.uid,
+      createdBy: auth.currentUser?.uid || "anon",
     });
 
     if (diaryStatus) diaryStatus.textContent = "✅ Αποθηκεύτηκε.";
@@ -882,7 +1208,6 @@ diaryCancelEdit?.addEventListener("click", () => {
 });
 
 btnDiaryAddOpen?.addEventListener("click", () => {
-  // απλά κάνει focus στο textarea για γρήγορη προσθήκη
   try {
     diaryText?.focus();
     diaryText?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -908,6 +1233,18 @@ function afterStepChange() {
   const active = steps[current];
   if (!active) return;
 
+  // cleanup όταν φεύγεις από stepUs
+  if (previousStepId === "stepUs" && active.id !== "stepUs") {
+    if (dailyQAUnsub) {
+      dailyQAUnsub();
+      dailyQAUnsub = null;
+    }
+    if (streakUnsub) {
+      streakUnsub();
+      streakUnsub = null;
+    }
+  }
+
   if (active.id === "step2") requestAnimationFrame(() => requestAnimationFrame(() => initPuzzle()));
 
   if (active.id === "stepQuiz") {
@@ -925,7 +1262,6 @@ function afterStepChange() {
 
   if (active.id === "stepMoments") startMomentsListener();
 
-  // ✅ όταν μπαίνεις στο ημερολόγιο
   if (active.id === "stepDiary") {
     renderWeekdays();
     calView = new Date();
@@ -934,6 +1270,11 @@ function afterStepChange() {
     startDiaryMonthMarksListener();
     startDiaryDayListener();
     stopEditMode();
+  }
+
+  // ✅ “ΑΠΟ ΤΗΝ ΑΡΧΗ” να φαίνεται η Ερώτηση Ημέρας
+  if (active.id === "stepUs") {
+    openDailyQuestionUI();
   }
 }
 
@@ -1012,9 +1353,9 @@ btnFutureNext?.addEventListener("click", () => {
   const card = FUTURE_CARDS[futureIndex % FUTURE_CARDS.length];
   if (futurePanel) {
     futurePanel.innerHTML = `
-      ${card.img ? `<img class="futureImg" src="${card.img}" alt="${card.title}">` : ""}
-      <div style="font-weight:950; margin-bottom:6px;">${card.title}</div>
-      <div style="opacity:.9; line-height:1.45;">${card.text}</div>
+      ${card.img ? `<img class="futureImg" src="${card.img}" alt="${esc(card.title)}">` : ""}
+      <div style="font-weight:950; margin-bottom:6px;">${esc(card.title)}</div>
+      <div style="opacity:.9; line-height:1.45;">${esc(card.text)}</div>
     `;
   }
 
@@ -1026,33 +1367,8 @@ btnFutureNext?.addEventListener("click", () => {
 });
 
 // ================== US MODE ==================
-btnUsCheckin?.addEventListener("click", () => {
-  if (!usBox) return;
-
-  usBox.innerHTML = `
-    <div style="font-weight:900; margin-bottom:6px;">✅ Check-in</div>
-    <div style="opacity:.9;">Σήμερα θέλω από εμάς:</div>
-    <div style="margin-top:10px; display:grid; gap:8px;">
-      <button class="btn ghost" type="button" id="needHug">🤗 Αγκαλιά</button>
-      <button class="btn ghost" type="button" id="needTalk">💬 Να μιλήσουμε</button>
-      <button class="btn ghost" type="button" id="needCalm">🕊️ Ηρεμία</button>
-    </div>
-    <div style="opacity:.75; font-size:13px; margin-top:8px;">(Αποθηκεύεται στο κινητό)</div>
-  `;
-
-  const save = (text) => {
-    localStorage.setItem("us_last_checkin", text);
-    usBox.innerHTML = `💘 Σημειώθηκε: <b>${text}</b><br><span style="opacity:.85;">(μένει στο κινητό)</span>`;
-  };
-
-  document.getElementById("needHug")?.addEventListener("click", () => save("Αγκαλιά"));
-  document.getElementById("needTalk")?.addEventListener("click", () => save("Να μιλήσουμε"));
-  document.getElementById("needCalm")?.addEventListener("click", () => save("Ηρεμία"));
-});
-
+btnUsCheckin?.addEventListener("click", openDailyQuestionUI);
 btnUsMemories?.addEventListener("click", () => goTo("stepMoments"));
-
-// ✅ τώρα το “Σημειώσεις” πάει στο ημερολόγιο
 btnUsNotes?.addEventListener("click", () => goTo("stepDiary"));
 
 btnUsBack?.addEventListener("click", () => openIntro());
