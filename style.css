@@ -1000,12 +1000,27 @@ body{
   transform: scale(1.02);
 }
 /* ===== Fullscreen Reels Viewer (swipe up/down) ===== */
-.momReels{
+.momReels {
   position: fixed;
-  inset: 0;
+  /* Αντί για inset: 0, δίνουμε μια μικρή απόσταση από πάνω αν θες να φαίνεται η καμπύλη */
+  top: 0; 
+  left: 0;
+  right: 0;
+  bottom: 0;
+  
   z-index: 10000;
   background: rgba(10,6,12,.96);
   backdrop-filter: blur(10px);
+
+  /* Εδώ προσθέτουμε τις μεγάλες ομαλές καμπύλες */
+  border-top-left-radius: 35px; 
+  border-top-right-radius: 35px;
+  
+  /* Σημαντικό: για να μην "περισσεύει" το περιεχόμενο στις γωνίες */
+  overflow: hidden;
+  
+  /* Προαιρετικό: Ένα λεπτό border στο πάνω μέρος για να τονίζει την καμπύλη */
+  border-top: 1px solid rgba(255,255,255,0.15);
 }
 .momReels.hidden{ display:none; }
 
