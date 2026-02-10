@@ -206,7 +206,7 @@ const QUIZ = [
     loseText: "😌 Όχι μωρό… ήταν το «Ήσουν χθες Αλχεμι;».",
   },
   {
-    q: "Πού πήγαμε πρώτη φορά μόνοι μας;",
+    q: "Πού πήγαμε πρώτη φορά μόνες μας;",
     options: ["Ναύπλιο", "Αθήνα", "Χαλκίδα"],
     correct: 0,
     winText: "💘 Σωστό. Ναύπλιο και αναμνήσεις.",
@@ -440,6 +440,40 @@ function pickQuestionForDay(dayKey) {
   return DAILY_QUESTIONS[hash % DAILY_QUESTIONS.length];
 }
 
+// ================== ✅ STREAK RESET CHECK (NEW) ==================
+async function checkAndResetStreakIfMissed() {
+  await authReady;
+
+  const streakRef = doc(db, "couple", COUPLE_ID, "streaks", "dailyQA");
+  const todayKey = getDayKeyAthens();
+  const yesterdayKey = getYesterdayKeyAthens();
+
+  try {
+    await runTransaction(db, async (tx) => {
+      const snap = await tx.get(streakRef);
+      if (!snap.exists()) return;
+
+      const data = snap.data();
+      const last = data.lastCompleteDayKey || null;
+
+      // ✅ αν χάθηκε μέρα
+      if (last && last !== todayKey && last !== yesterdayKey) {
+        tx.set(
+          streakRef,
+          {
+            currentStreak: 0,
+            lastCompleteDayKey: null,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+      }
+    });
+  } catch (e) {
+    console.error("streak reset check failed:", e);
+  }
+}
+
 function startStreakListener() {
   if (streakUnsub) streakUnsub();
 
@@ -625,9 +659,12 @@ async function saveDailyAnswer(whoKey) {
   }
 }
 
-
-function openDailyQuestionUI() {
+// ================== ✅ OPEN DAILY QA UI (UPDATED) ==================
+async function openDailyQuestionUI() {
   if (!usBox) return;
+
+  // 🔥 ΕΔΩ: Reset streak αν χάθηκε μέρα (ΠΡΙΝ listeners)
+  await checkAndResetStreakIfMissed();
 
   const dayKey = getDayKeyAthens();
   const q = pickQuestionForDay(dayKey);
@@ -698,7 +735,7 @@ function openDailyQuestionUI() {
   document.getElementById("qa_save_giorgos")?.addEventListener("click", () => saveDailyAnswer("giorgos"));
   document.getElementById("qa_save_venia")?.addEventListener("click", () => saveDailyAnswer("venia"));
 
-  // listeners
+  // listeners (μετά το reset check)
   startDailyQAListener(dayKey);
   startStreakListener();
 
@@ -1309,6 +1346,7 @@ function afterStepChange() {
 
   // ✅ “ΑΠΟ ΤΗΝ ΑΡΧΗ” να φαίνεται η Ερώτηση Ημέρας
   if (active.id === "stepUs") {
+    // Δεν χρειάζεται await εδώ — μέσα στο openDailyQuestionUI() η σειρά είναι σωστή.
     openDailyQuestionUI();
   }
 }
@@ -1402,7 +1440,10 @@ btnFutureNext?.addEventListener("click", () => {
 });
 
 // ================== US MODE ==================
-btnUsCheckin?.addEventListener("click", openDailyQuestionUI);
+// ✅ updated: επειδή openDailyQuestionUI είναι async
+btnUsCheckin?.addEventListener("click", async () => {
+  await openDailyQuestionUI();
+});
 btnUsMemories?.addEventListener("click", () => goTo("stepMoments"));
 btnUsNotes?.addEventListener("click", () => goTo("stepDiary"));
 
@@ -1792,4 +1833,3 @@ applyReveal(0);
 
 // ξεκίνα πάντα στο πρώτο step (πίσω από lock/intro)
 showStep(0);
-
